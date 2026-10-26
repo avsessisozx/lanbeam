@@ -80,6 +80,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           v="${GITHUB_REF_NAME#v}"
+          if [ ! -f android/app-release.apk ]; then
+            echo "::error::APK is unsigned: add the LANBEAM_KEYSTORE_* secrets (see README) and re-tag."
+            exit 1
+          fi
           cp pc/LanBeam.jar "LanBeam-$v.jar"
           cp android/app-release.apk "LanBeam-$v.apk"
           gh release create "$GITHUB_REF_NAME" "LanBeam-$v.jar" "LanBeam-$v.apk" \
