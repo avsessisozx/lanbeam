@@ -1,0 +1,28 @@
+# Build output (release files are published by GitHub Actions instead)
+build/
+dist/
+*.apk
+*.aab
+
+# Android / Gradle
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/
+android/captures/
+android/local.properties
+.externalNativeBuild/
+.cxx/
+
+# Signing secrets: never commit
+*.jks
+*.keystore
+keystore.properties
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+*.log

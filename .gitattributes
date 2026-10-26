@@ -1,0 +1,9 @@
+# Same line endings on every OS: LF everywhere, CRLF only for Windows batch files.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+gradlew text eol=lf
+
+*.jar binary
+*.png binary
+*.jks binary

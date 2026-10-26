@@ -1,0 +1,62 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Release signing: CI passes the keystore through environment variables (GitHub secrets);
+// locally it is read from android/keystore.properties. Neither the keystore nor its passwords are committed.
+def signing = new Properties()
+def signingFile = rootProject.file('keystore.properties')
+if (signingFile.exists()) signingFile.withInputStream { signing.load(it) }
+def keystorePath = System.getenv('LANBEAM_KEYSTORE') ?: signing.getProperty('storeFile')
+
+android {
+    namespace 'com.lanbeam.android'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'io.github.avsessisozx.lanbeam'
+        minSdk 26
+        targetSdk 35
+        // CI sets these from the git tag (v1.2.3) and the run number.
+        versionCode((System.getenv('LANBEAM_VERSION_CODE') ?: '1') as int)
+        versionName System.getenv('LANBEAM_VERSION') ?: '0.1.0-dev'
+    }
+
+    sourceSets {
+        // The protocol core is shared verbatim with the PC app.
+        main.java.srcDirs += '../../core/src/main/java'
+    }
+
+    signingConfigs {
+        if (keystorePath) {
+            release {
+                storeFile file(keystorePath)
+                storePassword System.getenv('LANBEAM_KEYSTORE_PASSWORD') ?: signing.getProperty('storePassword')
+                keyAlias System.getenv('LANBEAM_KEY_ALIAS') ?: signing.getProperty('keyAlias')
+                keyPassword System.getenv('LANBEAM_KEY_PASSWORD') ?: signing.getProperty('keyPassword')
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (keystorePath) signingConfig signingConfigs.release
+        }
+    }
+
+    lint {
+        // Turkish UI strings are written inline on purpose; keep lint focused on real problems.
+        disable 'HardcodedText', 'SetTextI18n', 'ButtonStyle', 'OldTargetApi', 'AndroidGradlePluginVersion'
+    }
+}
+
+dependencies {
+    // QR code scanning (camera) and QR bitmap generation.
+    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
+}
