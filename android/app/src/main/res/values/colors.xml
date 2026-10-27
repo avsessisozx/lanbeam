@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#F4F6FB</color>
+    <color name="card">#FFFFFF</color>
+    <color name="stroke">#E1E6F0</color>
+    <color name="primary">#1565C0</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="tonal">#E3EDFB</color>
+    <color name="on_tonal">#0D47A1</color>
+    <color name="text">#1B1F2A</color>
+    <color name="text_dim">#5D6678</color>
+    <color name="success">#2E7D32</color>
+    <color name="danger">#C62828</color>
+    <color name="header_start">#1565C0</color>
+    <color name="header_end">#00897B</color>
+    <color name="track">#DCE3F0</color>
+</resources>

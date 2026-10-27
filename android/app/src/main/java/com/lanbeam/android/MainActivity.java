@@ -21,6 +21,7 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.res.ColorStateList;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.integration.android.IntentIntegrator;
@@ -42,7 +43,7 @@ public final class MainActivity extends Activity implements LanBeamService.UiLis
     private static final int REQ_HOTSPOT_PERMS = 21;
 
     private final List<FileSource> selected = new ArrayList<>();
-    private TextView selfInfo, selection, peersEmpty;
+    private TextView selfInfo, selection, peersEmpty, transfersEmpty;
     private LinearLayout peersBox, transfersBox;
 
     @Override
@@ -54,6 +55,7 @@ public final class MainActivity extends Activity implements LanBeamService.UiLis
         peersBox = findViewById(R.id.peers);
         peersEmpty = findViewById(R.id.peers_empty);
         transfersBox = findViewById(R.id.transfers);
+        transfersEmpty = findViewById(R.id.transfers_empty);
 
         findViewById(R.id.pick_files).setOnClickListener(v -> pickFiles());
         findViewById(R.id.pick_folder).setOnClickListener(v -> startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQ_TREE));
@@ -328,44 +330,102 @@ public final class MainActivity extends Activity implements LanBeamService.UiLis
         long total = 0;
         for (FileSource f : selected) total += f.size();
         selection.setText(selected.isEmpty() ? "Seçili dosya yok"
-                : selected.size() + " dosya seçildi (" + NetUtil.formatSize(total) + ")");
+                : "✓ " + selected.size() + " öğe seçildi (" + NetUtil.formatSize(total) + ")");
+        selection.setTextColor(getColor(selected.isEmpty() ? R.color.text_dim : R.color.success));
 
         peersBox.removeAllViews();
-        for (final Peer p : s.peers()) {
-            Button b = new Button(this);
-            b.setAllCaps(false);
-            b.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-            b.setText(("windows".equals(p.os) || "pc".equals(p.os) ? "🖥  " : "📱  ") + p.name + "   (" + p.host + ")");
-            b.setOnClickListener(v -> sendTo(p));
-            peersBox.addView(b);
-        }
+        for (final Peer p : s.peers()) peersBox.addView(peerView(p));
         peersEmpty.setVisibility(s.peers().isEmpty() ? View.VISIBLE : View.GONE);
 
         transfersBox.removeAllViews();
         for (final LanBeamService.Transfer t : s.transfers) transfersBox.addView(transferView(t));
+        transfersEmpty.setVisibility(s.transfers.isEmpty() ? View.VISIBLE : View.GONE);
+    }
+
+    private View peerView(final Peer p) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(12), dp(10), dp(12), dp(10));
+        row.setBackgroundResource(R.drawable.bg_card_ripple);
+        row.setClickable(true);
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rp.topMargin = dp(8);
+        row.setLayoutParams(rp);
+        row.setOnClickListener(v -> sendTo(p));
+
+        TextView avatar = new TextView(this);
+        avatar.setText("windows".equals(p.os) || "pc".equals(p.os) ? "🖥" : "📱");
+        avatar.setTextSize(20);
+        avatar.setGravity(Gravity.CENTER);
+        avatar.setBackgroundResource(R.drawable.bg_avatar);
+        row.addView(avatar, new LinearLayout.LayoutParams(dp(44), dp(44)));
+
+        LinearLayout texts = new LinearLayout(this);
+        texts.setOrientation(LinearLayout.VERTICAL);
+        texts.setPadding(dp(12), 0, dp(8), 0);
+        TextView name = new TextView(this);
+        name.setText(p.name);
+        name.setTextSize(16);
+        name.setTypeface(null, android.graphics.Typeface.BOLD);
+        name.setTextColor(getColor(R.color.text));
+        texts.addView(name);
+        TextView host = new TextView(this);
+        host.setText(p.host);
+        host.setTextSize(12);
+        host.setTextColor(getColor(R.color.text_dim));
+        texts.addView(host);
+        row.addView(texts, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+
+        boolean ready = !selected.isEmpty();
+        TextView chip = new TextView(this);
+        chip.setText(ready ? "Gönder ➜" : "Dosya seç");
+        chip.setTextSize(13);
+        chip.setTypeface(null, android.graphics.Typeface.BOLD);
+        chip.setTextColor(getColor(ready ? R.color.on_primary : R.color.on_tonal));
+        chip.setBackgroundResource(ready ? R.drawable.bg_chip : R.drawable.bg_chip_dim);
+        chip.setPadding(dp(14), dp(7), dp(14), dp(7));
+        row.addView(chip);
+        return row;
     }
 
     private View transferView(final LanBeamService.Transfer t) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.VERTICAL);
-        row.setPadding(0, dp(8), 0, dp(8));
+        row.setPadding(dp(12), dp(10), dp(12), dp(8));
+        row.setBackgroundResource(R.drawable.bg_card);
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rp.topMargin = dp(8);
+        row.setLayoutParams(rp);
+
         TextView title = new TextView(this);
-        title.setText(t.title);
+        title.setText((t.outgoing ? "↑  " : "↓  ") + t.title);
         title.setTextSize(15);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        title.setTextColor(getColor(R.color.text));
         row.addView(title);
+
         ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         bar.setMax(1000);
         bar.setProgress(t.total > 0 ? (int) (t.done * 1000 / t.total) : (t.finished && t.ok ? 1000 : 0));
-        row.addView(bar);
+        int barColor = getColor(t.finished && !t.ok ? R.color.danger : t.finished ? R.color.success : R.color.primary);
+        bar.setProgressTintList(ColorStateList.valueOf(barColor));
+        bar.setProgressBackgroundTintList(ColorStateList.valueOf(getColor(R.color.track)));
+        LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(8));
+        bp.topMargin = dp(8);
+        bp.bottomMargin = dp(4);
+        row.addView(bar, bp);
+
         LinearLayout line = new LinearLayout(this);
         line.setGravity(Gravity.CENTER_VERTICAL);
         TextView status = new TextView(this);
         status.setText(t.status);
-        status.setAlpha(0.75f);
+        status.setTextSize(13);
+        status.setTextColor(getColor(t.finished && !t.ok ? R.color.danger : t.finished ? R.color.success : R.color.text_dim));
         line.addView(status, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
         final Runnable cancel = t.cancel;
         if (cancel != null && !t.finished) {
-            Button c = new Button(this, null, android.R.attr.borderlessButtonStyle);
+            Button c = new Button(this, null, 0, R.style.BtnText);
             c.setText(t.outgoing && t.status.startsWith("Paylaşımda") || t.title.startsWith("📶") ? "Kapat" : "İptal");
             c.setOnClickListener(v -> cancel.run());
             line.addView(c);

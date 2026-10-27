@@ -2,6 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:clipToPadding="false"
     android:fitsSystemWindows="true">
 
     <LinearLayout
@@ -10,158 +11,195 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/app_name"
-            android:textSize="26sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/self_info"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingBottom="12dp"
-            android:paddingTop="4dp"
-            android:alpha="0.7" />
-
-        <!-- 1. What to send -->
-        <TextView style="@style/Section" android:text="1. Gönderilecekler" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <Button
-                android:id="@+id/pick_files"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Dosya seç" />
-
-            <Button
-                android:id="@+id/pick_folder"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Klasör seç" />
-        </LinearLayout>
-
+        <!-- Header -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical">
+            android:background="@drawable/bg_header"
+            android:orientation="vertical"
+            android:padding="20dp">
 
             <TextView
-                android:id="@+id/selection"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-
-            <Button
-                android:id="@+id/clear_selection"
-                style="?android:attr/borderlessButtonStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Temizle" />
+                android:text="@string/app_name"
+                android:textColor="#FFFFFF"
+                android:textSize="28sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/self_info"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="6dp"
+                android:textColor="#E6FFFFFF"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="2dp"
+                android:text="Alıma hazır · aynı ağdaki cihazlar seni görebilir"
+                android:textColor="#B3FFFFFF"
+                android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- 2. Where to -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical">
+        <!-- What to send -->
+        <LinearLayout style="@style/Card">
 
             <TextView
                 style="@style/Section"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:text="2. Yakındaki cihaza dokunun" />
+                android:text="Gönderilecekler" />
 
-            <Button
-                android:id="@+id/refresh"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Yenile" />
+                android:layout_marginTop="8dp">
+
+                <Button
+                    android:id="@+id/pick_files"
+                    style="@style/BtnTonal"
+                    android:text="📄  Dosya seç" />
+
+                <Button
+                    android:id="@+id/pick_folder"
+                    style="@style/BtnTonal"
+                    android:text="📁  Klasör seç" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:paddingStart="4dp">
+
+                <TextView
+                    android:id="@+id/selection"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/text_dim"
+                    android:textSize="13sp" />
+
+                <Button
+                    android:id="@+id/clear_selection"
+                    style="@style/BtnText"
+                    android:text="Temizle" />
+            </LinearLayout>
         </LinearLayout>
 
-        <LinearLayout
-            android:id="@+id/peers"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
+        <!-- Nearby devices -->
+        <LinearLayout style="@style/Card">
 
-        <TextView
-            android:id="@+id/peers_empty"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:alpha="0.6"
-            android:text="Cihaz bulunamadı. Diğer cihazda LanBeam açık ve aynı Wi-Fi/modemde olmalı." />
-
-        <TextView style="@style/Section" android:text="Diğer yollar" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <Button
-                android:id="@+id/show_qr"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="QR / bağlantı" />
+                android:gravity="center_vertical">
 
-            <Button
-                android:id="@+id/hotspot"
-                android:layout_width="0dp"
+                <TextView
+                    style="@style/Section"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="Yakındaki cihazlar" />
+
+                <Button
+                    android:id="@+id/refresh"
+                    style="@style/BtnText"
+                    android:text="⟳  Yenile" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/peers"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Router olmadan" />
+                android:orientation="vertical" />
+
+            <TextView
+                android:id="@+id/peers_empty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_dashed"
+                android:gravity="center"
+                android:padding="18dp"
+                android:text="Cihaz bulunamadı.\nDiğer cihazda LanBeam açık ve aynı Wi-Fi/modemde olmalı."
+                android:textColor="@color/text_dim"
+                android:textSize="13sp" />
         </LinearLayout>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <Button
-                android:id="@+id/scan"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="QR tara (al)" />
-
-            <Button
-                android:id="@+id/from_link"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Bağlantıdan al" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical">
+        <!-- Other ways -->
+        <LinearLayout style="@style/Card">
 
             <TextView
                 style="@style/Section"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:text="Aktarımlar" />
+                android:text="Diğer yollar" />
 
-            <Button
-                android:id="@+id/clear_transfers"
-                style="?android:attr/borderlessButtonStyle"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Bitenleri temizle" />
+                android:layout_marginTop="8dp">
+
+                <Button
+                    android:id="@+id/show_qr"
+                    style="@style/BtnTonal"
+                    android:text="▦  QR / bağlantı" />
+
+                <Button
+                    android:id="@+id/hotspot"
+                    style="@style/BtnTonal"
+                    android:text="📶  Router olmadan" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <Button
+                    android:id="@+id/scan"
+                    style="@style/BtnTonal"
+                    android:text="📷  QR tara (al)" />
+
+                <Button
+                    android:id="@+id/from_link"
+                    style="@style/BtnTonal"
+                    android:text="🔗  Bağlantıdan al" />
+            </LinearLayout>
         </LinearLayout>
 
-        <LinearLayout
-            android:id="@+id/transfers"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
+        <!-- Transfers -->
+        <LinearLayout style="@style/Card">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical">
+
+                <TextView
+                    style="@style/Section"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="Aktarımlar" />
+
+                <Button
+                    android:id="@+id/clear_transfers"
+                    style="@style/BtnText"
+                    android:text="Bitenleri temizle" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/transfers"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <TextView
+                android:id="@+id/transfers_empty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="6dp"
+                android:text="Henüz aktarım yok."
+                android:textColor="@color/text_dim"
+                android:textSize="13sp" />
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

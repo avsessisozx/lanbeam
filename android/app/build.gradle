@@ -2,13 +2,6 @@ plugins {
     id 'com.android.application'
 }
 
-// Release signing: CI passes the keystore through environment variables (GitHub secrets);
-// locally it is read from android/keystore.properties. Neither the keystore nor its passwords are committed.
-def signing = new Properties()
-def signingFile = rootProject.file('keystore.properties')
-if (signingFile.exists()) signingFile.withInputStream { signing.load(it) }
-def keystorePath = System.getenv('LANBEAM_KEYSTORE') ?: signing.getProperty('storeFile')
-
 android {
     namespace 'com.lanbeam.android'
     compileSdk 36
@@ -27,14 +20,14 @@ android {
         main.java.srcDirs += '../../core/src/main/java'
     }
 
+    // Every build is signed with the shared key kept in the repo, so new versions install over old ones
+    // without any secrets or files on a personal computer. Personal use only; not for Play Store.
     signingConfigs {
-        if (keystorePath) {
-            release {
-                storeFile file(keystorePath)
-                storePassword System.getenv('LANBEAM_KEYSTORE_PASSWORD') ?: signing.getProperty('storePassword')
-                keyAlias System.getenv('LANBEAM_KEY_ALIAS') ?: signing.getProperty('keyAlias')
-                keyPassword System.getenv('LANBEAM_KEY_PASSWORD') ?: signing.getProperty('keyPassword')
-            }
+        shared {
+            storeFile rootProject.file('keystore/lanbeam-shared.jks')
+            storePassword 'lanbeam'
+            keyAlias 'lanbeam'
+            keyPassword 'lanbeam'
         }
     }
 
@@ -44,9 +37,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfig signingConfigs.shared
+        }
         release {
             minifyEnabled false
-            if (keystorePath) signingConfig signingConfigs.release
+            signingConfig signingConfigs.shared
         }
     }
 

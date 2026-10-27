@@ -14,10 +14,11 @@ android/local.properties
 .externalNativeBuild/
 .cxx/
 
-# Signing secrets: never commit
+# Personal keys stay out of git; the shared project key below is committed on purpose.
 *.jks
 *.keystore
 keystore.properties
+!android/keystore/lanbeam-shared.jks
 
 # IDE / OS
 .idea/

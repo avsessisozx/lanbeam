@@ -56,20 +56,16 @@ cd android && gradlew.bat assembleDebug
 
 ### Sürüm yayınlama
 Her `main` gönderiminde GitHub Actions PC'yi derleyip testi çalıştırır, Android APK'sını derleyip lint'ten geçirir.
-`v` ile başlayan bir etiket gönderildiğinde jar ve imzalı APK ile otomatik **Release** oluşturur:
+`v` ile başlayan bir etiket gönderildiğinde jar ve APK ile otomatik **Release** oluşturur:
 ```bash
 git tag v0.2.0
 git push origin v0.2.0
 ```
 
-### İmzalama anahtarı (önemli)
-Android güncellemeleri yalnızca **aynı anahtarla** imzalanırsa yüklenir. Anahtar repoda değildir:
-- Yerelde: `%USERPROFILE%\.lanbeam\lanbeam-release.jks` + `keystore.properties` (şifreler).
-  `android/keystore.properties` bu dosyayı gösterir (git'e girmez).
-- GitHub'da: `LANBEAM_KEYSTORE_B64`, `LANBEAM_KEYSTORE_PASSWORD`, `LANBEAM_KEY_ALIAS`, `LANBEAM_KEY_PASSWORD` secret'ları.
-
-`.lanbeam` klasörünü bilgisayar dışında güvenli bir yere (şifre yöneticisi, şifreli yedek) yedekleyin.
-Kaybolursa yayınlanmış uygulama bir daha güncellenemez.
+### İmzalama anahtarı
+Tüm derlemeler depodaki sabit anahtarla (`android/keystore/lanbeam-shared.jks`) imzalanır; secret veya
+bilgisayarda saklanan bir dosya gerekmez. Böylece her yeni sürüm eskisinin üzerine kurulur.
+Bu anahtar herkese açıktır; yalnızca kişisel kullanım içindir, Play Store için kullanılmamalıdır.
 
 ## Güvenlik notları
 - Paylaşımlar 16 karakterlik rastgele bir token ile korunur; her gelen aktarım alıcı tarafından onaylanır.
