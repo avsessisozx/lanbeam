@@ -48,6 +48,8 @@ Ana ekrandaki **Bağlantı ve rapor** bölümü (PC'de **Bağlantı / Rapor** d�
 
 Uygulama Wi-Fi bandını veya donanım sınırını değiştiremez; yalnızca neyin sınır olduğunu gösterir.
 
+Hızla ilgili ölçümler, SuperBeam karşılaştırması ve yapılacaklar: [docs/HIZ-ANALIZI.md](docs/HIZ-ANALIZI.md).
+
 ## Geliştirme
 
 ```
