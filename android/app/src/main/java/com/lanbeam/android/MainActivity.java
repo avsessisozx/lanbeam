@@ -49,6 +49,7 @@ public final class MainActivity extends Activity implements LanBeamService.UiLis
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        installCrashRecorder();
         setContentView(R.layout.activity_main);
         selfInfo = findViewById(R.id.self_info);
         selection = findViewById(R.id.selection);
@@ -300,6 +301,36 @@ public final class MainActivity extends Activity implements LanBeamService.UiLis
         new AlertDialog.Builder(this).setTitle("Cihaz adı").setView(e)
                 .setPositiveButton("Kaydet", (d, w) -> { if (!e.getText().toString().trim().isEmpty()) s.setDeviceName(e.getText().toString().trim()); })
                 .setNegativeButton("Vazgeç", null).show();
+    }
+
+    // ------------------------------------------------------------------ crash recording
+
+    /** Saves the stack trace of a crash so the next start can offer it in the report (no logcat needed). */
+    private void installCrashRecorder() {
+        final java.io.File f = new java.io.File(getFilesDir(), "crash.txt");
+        try {
+            if (f.exists()) {
+                byte[] b = java.nio.file.Files.readAllBytes(f.toPath());
+                com.lanbeam.core.Diagnostics.crash(new String(b, "UTF-8"));
+                f.delete();
+                new AlertDialog.Builder(this).setTitle("Uygulama önceki seferde kapandı")
+                        .setMessage("Hata kaydı rapora eklendi. Raporu kopyalayıp geliştiriciye iletebilirsiniz.")
+                        .setPositiveButton("Raporu aç", (d, w) -> showReport())
+                        .setNegativeButton("Kapat", null).show();
+            }
+        } catch (Exception ignored) {
+        }
+        final Thread.UncaughtExceptionHandler prev = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            try {
+                java.io.StringWriter sw = new java.io.StringWriter();
+                e.printStackTrace(new java.io.PrintWriter(sw));
+                String trace = "Thread: " + t.getName() + "\n" + sw;
+                java.nio.file.Files.write(f.toPath(), trace.getBytes("UTF-8"));
+            } catch (Throwable ignored) {
+            }
+            if (prev != null) prev.uncaughtException(t, e);
+        });
     }
 
     // ------------------------------------------------------------------ link info, speed test, report

@@ -36,6 +36,13 @@ public final class Diagnostics {
     private static final Map<String, String> tests = new LinkedHashMap<>();
     private static final long T0 = System.currentTimeMillis();
 
+    private static String lastCrash;
+
+    /** Stack trace of the previous crash (kept for the report). */
+    public static synchronized void crash(String trace) {
+        lastCrash = trace == null ? null : (trace.length() > 4000 ? trace.substring(0, 4000) : trace);
+    }
+
     /** Device/link fact shown in the report ("Wi-Fi bandı" -> "5 GHz"). Null value removes it. */
     public static synchronized void info(String key, String value) {
         if (value == null) info.remove(key); else info.put(key, value);
@@ -115,6 +122,7 @@ public final class Diagnostics {
             sb.append('\n');
         }
         sb.append("\nYorum: ").append(verdict()).append('\n');
+        if (lastCrash != null) sb.append("\n== Önceki çökme ==\n").append(lastCrash).append('\n');
         sb.append("\n== Olay günlüğü ==\n");
         if (log.isEmpty()) sb.append("(boş)\n");
         for (String l : log) sb.append(l).append('\n');
