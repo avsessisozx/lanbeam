@@ -1,15 +1,22 @@
-# LanBeam — durum (27 Ekim 2026, v0.2.0 hazırlığı)
+# LanBeam — durum (27 Ekim 2026, v0.3.0 yayınlandı)
 
 ## Yapıldı
 - Android ve Windows arayüzü yenilendi (kart düzeni, açık/koyu tema; Windows'ta Ayarlar'dan tema seçimi).
 - İmza: depodaki sabit anahtar (android/keystore/lanbeam-shared.jks) ile; secret/yerel dosya gerekmez.
 - Özgünlük taraması: başka uygulamadan kopya kod/isim bulunmadı (kendi protokolü, MIT).
 
+## v0.3.0 (27 Ekim): hız testi ve rapor
+- Android + PC: Wi-Fi bandı/hızı/sinyal gösterimi (2,4 GHz ve zayıf sinyalde ipucu), hız testi (ağ + depolama), "Rapor / Geri bildirim" (kopyala, paylaş, GitHub'da bildir).
+- Her aktarımda ağ/depolama süresi ölçülür; rapor darboğazı söyler. Rapor dosya adı, IP, SSID, cihaz adı, anahtar içermez; kendiliğinden gönderilmez.
+- Otomatik tampon/paralel bağlantı ayarı EKLENMEDİ: tek akış zaten bağlantıyı doyuruyor, ölçüm yapmadan değiştirmek riskli.
+
 ## Doğrulandı
+- v0.3.0: CI (Android derleme+lint, PC derleme+uçtan uca test: hız testi, depolama testi, rapor gizlilik kontrolü) geçti; Windows rapor penceresi başsız ekran görüntüsüyle bakıldı.
 - CI: Android derleme + lint, PC derleme + uçtan uca aktarım testi geçti (main'e itilen sürüm).
 - Windows arayüzü, başsız ortamda ekran görüntüsü alınarak açık/koyu temada incelendi.
 
 ## Doğrulanmadı
+- Hız testi ve raporun gerçek Wi-Fi'de değerleri (Android Wi-Fi bilgisi, Windows netsh/PowerShell çıktısı) denenmedi.
 - Android arayüzü gerçek telefonda görülmedi (yalnız CI'da derlendi, lint'ten geçti).
 - Windows arayüzü gerçek Windows'ta (yazı tipi, ölçek) denenmedi.
 
