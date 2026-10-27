@@ -15,6 +15,8 @@ Protokol: [PROTOCOL.md](PROTOCOL.md)
 ## İndirme
 Hazır dosyalar **Releases** sayfasında: `LanBeam-x.y.z.jar` (PC) ve `LanBeam-x.y.z.apk` (Android 8.0+).
 
+> **Yalnızca bu sayfadan indirin.** İmza anahtarı herkese açıktır (açık kaynak); başka bir yerden gelen APK, gerçek uygulamanın üstüne kurulan değiştirilmiş bir kopya olabilir.
+
 ## Kullanım
 
 ### PC (Windows / Linux / macOS, Java 8+)
