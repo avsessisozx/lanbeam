@@ -157,6 +157,8 @@ public final class HttpServer {
             return headers.get(name.toLowerCase());
         }
 
+        public InputStream bodyStream() { return body; }
+
         /** Reads the request body (bounded by Content-Length and maxBytes). */
         public String bodyText(int maxBytes) throws IOException {
             String cl = header("content-length");

@@ -72,6 +72,20 @@ public final class LoopbackTest {
         check(l.port == 8081 && l.token.equals("abc") && l.ssid.equals("My Net") && l.pass.equals("p&w"), "link parse");
         check(ShareLink.parse(l.toString()).pass.equals("p&w"), "link roundtrip");
 
+        // Speed test, disk test and report
+        SpeedTest.Result sr = SpeedTest.run("127.0.0.1", sender.port(), 16L * 1024 * 1024);
+        check(sr.downloadBps > 0 && sr.uploadBps > 0, "speedtest " + sr.summary());
+        check(SpeedTest.diskWrite(tmp, 8L * 1024 * 1024) > 0, "disk write test");
+        Diagnostics.info("Wi-Fi bandı", "5 GHz");
+        Diagnostics.log("bağlandı 192.168.1.5:8080 /s/abcDEF123");
+        String rep = Diagnostics.report("test", "test");
+        System.out.println(rep);
+        check(rep.contains("Alım OK") && rep.contains("Gönderim OK"), "report lists both transfers");
+        check(rep.contains("Ağ testi") && rep.contains("Depolama yazma"), "report has measurements");
+        check(rep.contains("gönderilmez") && !rep.contains("192.168.1.5") && !rep.contains("abcDEF123") && !rep.contains("küçük") && !rep.contains(share.token),
+                "report has no ip/token/file names");
+        check(rep.contains("<ip>") && rep.contains("<token>"), "sanitized markers");
+
         sender.stop();
         receiver.stop();
         System.out.println("ALL TESTS PASSED");

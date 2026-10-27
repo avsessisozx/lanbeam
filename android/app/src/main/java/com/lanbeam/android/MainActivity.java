@@ -67,6 +67,8 @@ public final class MainActivity extends Activity implements LanBeamService.UiLis
         findViewById(R.id.clear_transfers).setOnClickListener(v -> { LanBeamService s = LanBeamService.get(); if (s != null) s.clearFinished(); });
         findViewById(R.id.refresh).setOnClickListener(v -> { LanBeamService s = LanBeamService.get(); if (s != null) s.refreshPeers(); });
         selfInfo.setOnClickListener(v -> rename());
+        findViewById(R.id.speed_test).setOnClickListener(v -> speedTest());
+        findViewById(R.id.report).setOnClickListener(v -> showReport());
 
         requestBasicPermissions();
         LanBeamService.start(this);
@@ -300,6 +302,97 @@ public final class MainActivity extends Activity implements LanBeamService.UiLis
                 .setNegativeButton("Vazgeç", null).show();
     }
 
+    // ------------------------------------------------------------------ link info, speed test, report
+
+    private long lastLinkRead;
+
+    private String appVersion() {
+        try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception e) { return "?"; }
+    }
+
+    private void refreshLinkInfo() {
+        long now = System.currentTimeMillis();
+        if (now - lastLinkRead < 4000) return;
+        lastLinkRead = now;
+        LinkInfo li = LinkInfo.read(this);
+        ((TextView) findViewById(R.id.link_info)).setText(li.text);
+        TextView h = findViewById(R.id.link_hint);
+        h.setText(li.hint == null ? "" : "ℹ " + li.hint);
+        h.setVisibility(li.hint == null ? View.GONE : View.VISIBLE);
+    }
+
+    private void speedTest() {
+        LanBeamService s = LanBeamService.get();
+        if (s == null) return;
+        final List<Peer> peers = s.peers();
+        if (peers.isEmpty()) {
+            Toast.makeText(this, "Önce yakındaki bir cihaz bulunmalı (diğer cihazda LanBeam açık olsun)", Toast.LENGTH_LONG).show();
+            return;
+        }
+        String[] names = new String[peers.size()];
+        for (int i = 0; i < names.length; i++) names[i] = peers.get(i).name;
+        new AlertDialog.Builder(this).setTitle("Hangi cihazla ölçülsün?")
+                .setItems(names, (d, which) -> runSpeedTest(peers.get(which)))
+                .setNegativeButton("Vazgeç", null).show();
+    }
+
+    private void runSpeedTest(final Peer p) {
+        final AlertDialog[] dlg = new AlertDialog[1];
+        dlg[0] = new AlertDialog.Builder(this).setTitle("Hız testi").setMessage("Ölçülüyor… (yaklaşık 10 sn)")
+                .setCancelable(false).create();
+        dlg[0].show();
+        new Thread(() -> {
+            String msg;
+            try {
+                com.lanbeam.core.SpeedTest.Result r = com.lanbeam.core.SpeedTest.run(p.host, p.port, com.lanbeam.core.SpeedTest.DEFAULT_BYTES);
+                double disk = com.lanbeam.core.SpeedTest.diskWrite(getCacheDir(), 64L * 1024 * 1024);
+                msg = "Ağ: " + r.summary() + "\nTelefon depolama yazma: " + NetUtil.formatSpeed(disk)
+                        + "\n\nGerçek aktarım hızı bu değerlerin küçüğünü geçemez. Sonuçlar rapora eklendi.";
+            } catch (Exception e) {
+                com.lanbeam.core.Diagnostics.log("hız testi hatası: " + e);
+                msg = "Ölçüm yapılamadı: " + e.getMessage();
+            }
+            final String m = msg;
+            runOnUiThread(() -> {
+                dlg[0].dismiss();
+                if (!isFinishing()) new AlertDialog.Builder(this).setTitle("Hız testi").setMessage(m)
+                        .setPositiveButton("Tamam", null).show();
+            });
+        }, "lanbeam-speedtest").start();
+    }
+
+    private void showReport() {
+        LinkInfo.read(this);
+        final String text = com.lanbeam.core.Diagnostics.report(appVersion(), "Android");
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTypeface(android.graphics.Typeface.MONOSPACE);
+        t.setTextSize(11);
+        t.setTextIsSelectable(true);
+        t.setPadding(40, 20, 40, 20);
+        android.widget.ScrollView sv = new android.widget.ScrollView(this);
+        sv.addView(t);
+        new AlertDialog.Builder(this).setTitle("Rapor / Geri bildirim").setView(sv)
+                .setPositiveButton("Kopyala", (d, w) -> {
+                    android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText("LanBeam raporu", text));
+                    Toast.makeText(this, "Rapor kopyalandı", Toast.LENGTH_SHORT).show();
+                })
+                .setNeutralButton("Paylaş", (d, w) -> {
+                    Intent i = new Intent(Intent.ACTION_SEND).setType("text/plain")
+                            .putExtra(Intent.EXTRA_SUBJECT, "LanBeam raporu").putExtra(Intent.EXTRA_TEXT, text);
+                    startActivity(Intent.createChooser(i, "Raporu gönder"));
+                })
+                .setNegativeButton("GitHub'da bildir", (d, w) -> {
+                    android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText("LanBeam raporu", text));
+                    Toast.makeText(this, "Rapor kopyalandı; açılan sayfaya yapıştırın", Toast.LENGTH_LONG).show();
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/avsessisozx/lanbeam/issues/new")));
+                    } catch (Exception ignored) {}
+                }).show();
+    }
+
     // ------------------------------------------------------------------ service callbacks
 
     @Override public void onStateChanged() {
@@ -326,6 +419,7 @@ public final class MainActivity extends Activity implements LanBeamService.UiLis
         LanBeamService s = LanBeamService.get();
         if (s == null) return;
         selfInfo.setText(s.deviceName() + "  •  " + s.address() + "   ✎");
+        refreshLinkInfo();
 
         long total = 0;
         for (FileSource f : selected) total += f.size();

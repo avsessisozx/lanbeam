@@ -75,6 +75,9 @@ public final class Receiver implements Runnable {
     public void run() {
         List<String> saved = new ArrayList<>();
         String inProgress = null;
+        long diskNs = 0, netNs = 0, doneBytes = 0;
+        double peak = 0;
+        long t0 = System.currentTimeMillis();
         try {
             List<Entry> entries = new ArrayList<>();
             long total = 0;
@@ -101,15 +104,21 @@ public final class Receiver implements Runnable {
                     try (OutputStream out = sink.create(e.path, e.size)) {
                         long left = e.size;
                         while (left > 0) {
+                            long a = System.nanoTime();
                             int n = in.read(buf, 0, (int) Math.min(buf.length, left));
+                            long b = System.nanoTime();
                             if (n < 0) throw new IOException("Connection closed early");
                             out.write(buf, 0, n);
+                            netNs += b - a;
+                            diskNs += System.nanoTime() - b;
                             left -= n;
                             done += n;
+                            doneBytes = done;
                             long now = System.currentTimeMillis();
                             if (now - lastReport >= Protocol.PROGRESS_INTERVAL_MS) {
                                 lastReport = now;
                                 double secs = Math.max(0.001, (now - started) / 1000.0);
+                                peak = Math.max(peak, done / secs);
                                 listener.onProgress(this, done, total, done / secs);
                             }
                             if (cancelled) throw new IOException("Cancelled");
@@ -121,14 +130,25 @@ public final class Receiver implements Runnable {
             }
             double secs = Math.max(0.001, (System.currentTimeMillis() - started) / 1000.0);
             listener.onProgress(this, done, total, done / secs);
+            record(true, null, doneBytes, t0, peak, netNs, diskNs);
             listener.onFinished(this, true, null, saved);
         } catch (Exception ex) {
+            record(false, cancelled ? "cancelled" : ex.getClass().getSimpleName() + ": " + ex.getMessage(), doneBytes, t0, peak, netNs, diskNs);
             if (inProgress != null) sink.discard(inProgress);
             listener.onFinished(this, false, cancelled ? "İptal edildi" : String.valueOf(ex.getMessage()), saved);
         } finally {
             HttpURLConnection c = current;
             if (c != null) c.disconnect();
         }
+    }
+
+    private static void record(boolean ok, String err, long bytes, long t0, double peak, long netNs, long diskNs) {
+        Diagnostics.TransferStat st = new Diagnostics.TransferStat();
+        st.sent = false; st.ok = ok; st.error = err; st.bytes = bytes;
+        st.seconds = Math.max(0.001, (System.currentTimeMillis() - t0) / 1000.0);
+        st.peakBps = Math.max(peak, bytes / st.seconds);
+        st.netSeconds = netNs / 1e9; st.diskSeconds = diskNs / 1e9;
+        Diagnostics.transfer(st);
     }
 
     private static HttpURLConnection open(String url) throws IOException {

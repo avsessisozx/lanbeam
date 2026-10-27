@@ -37,6 +37,17 @@ Hazır dosyalar **Releases** sayfasında: `LanBeam-x.y.z.jar` (PC) ve `LanBeam-x
   *QR tara* yapınca bu ağa bağlanıp dosyaları çeker.
 - Alınan dosyalar: `Download/LanBeam`.
 
+## Hız testi ve rapor
+
+Ana ekrandaki **Bağlantı ve rapor** bölümü (PC'de **Bağlantı / Rapor** düğmesi) şunları yapar:
+
+- Wi-Fi bandını (2,4 / 5 GHz), bağlantı hızını ve sinyali gösterir; 2,4 GHz veya zayıf sinyalde ipucu verir.
+- **Hız testi:** seçtiğiniz cihazla ağ hızını ve depolama yazma hızını ölçer.
+- Her aktarımda zamanın ağda mı depolamada mı geçtiğini ölçer ve raporda "darboğaz" yorumu verir.
+- **Rapor / Geri bildirim:** cihaz modeli, bağlantı bilgisi, ölçümler ve son aktarımlar tek metindir; kopyalayıp geliştiriciye iletebilir veya GitHub'da sorun olarak açabilirsiniz. Dosya adı, IP, ağ adı ve paylaşım anahtarı içermez; kendiliğinden hiçbir yere gönderilmez.
+
+Uygulama Wi-Fi bandını veya donanım sınırını değiştiremez; yalnızca neyin sınır olduğunu gösterir.
+
 ## Geliştirme
 
 ```

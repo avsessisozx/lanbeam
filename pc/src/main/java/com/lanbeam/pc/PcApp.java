@@ -167,6 +167,7 @@ public final class PcApp implements LanBeamNode.Listener {
         JPanel hb = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         hb.setOpaque(false);
         hb.add(btn("Bağlantıdan al…", Widgets.Kind.HEADER, this::receiveFromLink));
+        hb.add(btn("Bağlantı / Rapor", Widgets.Kind.HEADER, () -> ReportDialog.show(frame, peerList.getSelectedValue(), saveDir())));
         hb.add(btn("Ayarlar", Widgets.Kind.HEADER, this::settings));
         JPanel east = new JPanel(new GridBagLayout());
         east.setOpaque(false);

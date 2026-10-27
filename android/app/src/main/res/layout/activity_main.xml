@@ -201,5 +201,56 @@
                 android:textColor="@color/text_dim"
                 android:textSize="13sp" />
         </LinearLayout>
+
+        <!-- Link and report -->
+        <LinearLayout style="@style/Card">
+
+            <TextView
+                style="@style/Section"
+                android:layout_width="match_parent"
+                android:text="Bağlantı ve rapor" />
+
+            <TextView
+                android:id="@+id/link_info"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="6dp"
+                android:text="…"
+                android:textColor="@color/text"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/link_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="4dp"
+                android:textColor="@color/text_dim"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingTop="10dp">
+
+                <Button
+                    android:id="@+id/speed_test"
+                    style="@style/BtnTonal"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:text="⚡  Hız testi" />
+
+                <Button
+                    android:id="@+id/report"
+                    style="@style/BtnTonal"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="📋  Rapor / Geri bildirim" />
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

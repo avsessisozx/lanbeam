@@ -147,6 +147,16 @@ public final class LanBeamNode {
             listener.onOffer(o);
             return;
         }
+        if (p.equals("/api/speedtest")) {
+            if (req.method.equals("POST")) {
+                SpeedTest.serveUpload(req, res);
+            } else {
+                long n = SpeedTest.DEFAULT_BYTES;
+                try { n = Long.parseLong(req.query.get("bytes")); } catch (Exception ignored) {}
+                SpeedTest.serveDownload(Math.max(0, Math.min(n, SpeedTest.MAX_BYTES)), res);
+            }
+            return;
+        }
         if (p.equals("/")) {
             res.send(200, "text/html; charset=utf-8", page("LanBeam", "<p>Bu cihazda LanBeam çalışıyor. Bir paylaşım bağlantısı açın.</p>"));
             return;
@@ -198,6 +208,9 @@ public final class LanBeamNode {
         long started = System.currentTimeMillis();
         long lastReport = 0;
         boolean ok = false;
+        String err = null;
+        long diskNs = 0, netNs = 0;
+        double peak = 0;
         try {
             long skip = from;
             for (FileSource f : s.files) {
@@ -207,23 +220,36 @@ public final class LanBeamNode {
                     long left = f.size() - skip;
                     skip = 0;
                     while (left > 0) {
+                        long a = System.nanoTime();
                         int n = in.read(buf, 0, (int) Math.min(buf.length, left));
-                        if (n < 0) throw new IOException("File shrank: " + f.path());
+                        long b = System.nanoTime();
+                        if (n < 0) throw new IOException("File shrank");
                         out.write(buf, 0, n);
+                        netNs += System.nanoTime() - b;
+                        diskNs += b - a;
                         left -= n;
                         sent += n;
                         long now = System.currentTimeMillis();
                         if (now - lastReport >= Protocol.PROGRESS_INTERVAL_MS) {
                             lastReport = now;
-                            listener.onSendProgress(s, sent, s.total, (sent - from) / Math.max(0.001, (now - started) / 1000.0));
+                            double bps = (sent - from) / Math.max(0.001, (now - started) / 1000.0);
+                            peak = Math.max(peak, bps);
+                            listener.onSendProgress(s, sent, s.total, bps);
                         }
                     }
                 }
             }
             out.flush();
             ok = true;
+        } catch (IOException e) {
+            err = e.getClass().getSimpleName() + ": " + e.getMessage();
+            throw e;
         } finally {
             double secs = Math.max(0.001, (System.currentTimeMillis() - started) / 1000.0);
+            Diagnostics.TransferStat st = new Diagnostics.TransferStat();
+            st.sent = true; st.bytes = sent - from; st.seconds = secs; st.peakBps = Math.max(peak, (sent - from) / secs);
+            st.netSeconds = netNs / 1e9; st.diskSeconds = diskNs / 1e9; st.ok = ok; st.error = err;
+            Diagnostics.transfer(st);
             listener.onSendProgress(s, sent, s.total, (sent - from) / secs);
             listener.onSendFinished(s, ok);
         }
