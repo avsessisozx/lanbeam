@@ -73,4 +73,4 @@ Bu anahtar herkese açıktır; yalnızca kişisel kullanım içindir, Play Store
 - Trafik şifrelenmez (düz HTTP). Yalnızca güvendiğiniz ev/ofis ağında kullanın.
 
 ## Lisans
-[MIT](LICENSE)
+[MIT](LICENSE). Kullanılan açık kaynak kütüphaneler: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)

@@ -70,6 +70,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
+        with:
+          path: src
       - uses: actions/download-artifact@v8
       - name: Publish
         env:
@@ -83,5 +86,6 @@ jobs:
           fi
           cp pc/LanBeam.jar "LanBeam-$v.jar"
           cp android/app-release.apk "LanBeam-$v.apk"
-          gh release create "v$v" "LanBeam-$v.jar" "LanBeam-$v.apk" \
+          cp src/THIRD_PARTY_NOTICES.md THIRD_PARTY_NOTICES.md
+          gh release create "v$v" "LanBeam-$v.jar" "LanBeam-$v.apk" THIRD_PARTY_NOTICES.md \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "LanBeam $v" --generate-notes
