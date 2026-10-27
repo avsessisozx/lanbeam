@@ -338,15 +338,16 @@ public final class MainActivity extends Activity implements LanBeamService.UiLis
 
     private void runSpeedTest(final Peer p) {
         final AlertDialog[] dlg = new AlertDialog[1];
-        dlg[0] = new AlertDialog.Builder(this).setTitle("Hız testi").setMessage("Ölçülüyor… (yaklaşık 10 sn)")
+        dlg[0] = new AlertDialog.Builder(this).setTitle("Hız testi").setMessage("Ölçülüyor… (yaklaşık 20 sn)")
                 .setCancelable(false).create();
         dlg[0].show();
         new Thread(() -> {
             String msg;
             try {
                 com.lanbeam.core.SpeedTest.Result r = com.lanbeam.core.SpeedTest.run(p.host, p.port, com.lanbeam.core.SpeedTest.DEFAULT_BYTES);
+                String par = com.lanbeam.core.SpeedTest.runParallel(p.host, p.port, 32L * 1024 * 1024);
                 double disk = com.lanbeam.core.SpeedTest.diskWrite(getCacheDir(), 64L * 1024 * 1024);
-                msg = "Ağ: " + r.summary() + "\nTelefon depolama yazma: " + NetUtil.formatSpeed(disk)
+                msg = "Ağ: " + r.summary() + "\n\nParalel bağlantılar:\n" + par + "\n\nTelefon depolama yazma: " + NetUtil.formatSpeed(disk)
                         + "\n\nGerçek aktarım hızı bu değerlerin küçüğünü geçemez. Sonuçlar rapora eklendi.";
             } catch (Exception e) {
                 com.lanbeam.core.Diagnostics.log("hız testi hatası: " + e);

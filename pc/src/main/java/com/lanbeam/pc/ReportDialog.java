@@ -98,8 +98,9 @@ final class ReportDialog {
                 String msg;
                 try {
                     SpeedTest.Result r = SpeedTest.run(selected.host, selected.port, SpeedTest.DEFAULT_BYTES);
+                    String par = SpeedTest.runParallel(selected.host, selected.port, 32L * 1024 * 1024);
                     double disk = SpeedTest.diskWrite(saveDir, 128L * 1024 * 1024);
-                    msg = "Ağ: " + r.summary() + "\nDepolama yazma (kayıt klasörü): " + NetUtil.formatSpeed(disk);
+                    msg = "Ağ: " + r.summary() + "\n\nParalel bağlantılar:\n" + par + "\n\nDepolama yazma (kayıt klasörü): " + NetUtil.formatSpeed(disk);
                 } catch (Exception ex) {
                     Diagnostics.log("hız testi hatası: " + ex);
                     msg = "Ölçüm yapılamadı: " + ex.getMessage();

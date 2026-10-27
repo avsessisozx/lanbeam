@@ -75,6 +75,8 @@ public final class LoopbackTest {
         // Speed test, disk test and report
         SpeedTest.Result sr = SpeedTest.run("127.0.0.1", sender.port(), 16L * 1024 * 1024);
         check(sr.downloadBps > 0 && sr.uploadBps > 0, "speedtest " + sr.summary());
+        String par = SpeedTest.runParallel("127.0.0.1", sender.port(), 8L * 1024 * 1024);
+        check(par.contains("1 bağlantı") && par.contains("4 bağlantı"), "parallel speedtest " + par);
         check(SpeedTest.diskWrite(tmp, 8L * 1024 * 1024) > 0, "disk write test");
         Diagnostics.info("Wi-Fi bandı", "5 GHz");
         Diagnostics.log("bağlandı 192.168.1.5:8080 /s/abcDEF123");

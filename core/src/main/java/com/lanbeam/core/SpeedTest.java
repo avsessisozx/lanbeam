@@ -95,6 +95,63 @@ public final class SpeedTest {
         return r;
     }
 
+
+    /** Download and upload with 1, 2 and 4 parallel connections: shows whether a single stream is the limit. */
+    public static String runParallel(final String host, final int port, long bytesPerStream) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        for (int n : new int[]{1, 2, 4}) {
+            double down = parallel(host, port, n, bytesPerStream, false);
+            double up = parallel(host, port, n, bytesPerStream, true);
+            String line = n + " bağlantı: indirme " + NetUtil.formatSpeed(down) + ", yükleme " + NetUtil.formatSpeed(up);
+            Diagnostics.test("Paralel test (" + n + ")", "indirme " + NetUtil.formatSpeed(down) + ", yükleme " + NetUtil.formatSpeed(up));
+            if (sb.length() > 0) sb.append('\n');
+            sb.append(line);
+        }
+        return sb.toString();
+    }
+
+    private static double parallel(final String host, final int port, int n, final long bytes, final boolean upload) throws IOException {
+        final IOException[] err = new IOException[1];
+        Thread[] ts = new Thread[n];
+        final String base = "http://" + host + ":" + port + "/api/speedtest";
+        long t0 = System.nanoTime();
+        for (int i = 0; i < n; i++) {
+            ts[i] = new Thread(() -> {
+                try {
+                    byte[] buf = new byte[Protocol.COPY_BUFFER];
+                    if (!upload) {
+                        HttpURLConnection c = (HttpURLConnection) new URL(base + "?bytes=" + bytes).openConnection();
+                        c.setConnectTimeout(5000);
+                        c.setReadTimeout(20000);
+                        try (InputStream in = c.getInputStream()) { while (in.read(buf) > 0) { } } finally { c.disconnect(); }
+                    } else {
+                        HttpURLConnection u = (HttpURLConnection) new URL(base).openConnection();
+                        u.setConnectTimeout(5000);
+                        u.setReadTimeout(20000);
+                        u.setRequestMethod("POST");
+                        u.setDoOutput(true);
+                        u.setFixedLengthStreamingMode(bytes);
+                        try {
+                            try (OutputStream o = u.getOutputStream()) {
+                                long left = bytes;
+                                while (left > 0) { int k = (int) Math.min(buf.length, left); o.write(buf, 0, k); left -= k; }
+                            }
+                            if (u.getResponseCode() != 200) throw new IOException("HTTP " + u.getResponseCode());
+                        } finally { u.disconnect(); }
+                    }
+                } catch (IOException e) {
+                    err[0] = e;
+                }
+            }, "lanbeam-speed-" + i);
+            ts[i].start();
+        }
+        for (Thread t : ts) {
+            try { t.join(); } catch (InterruptedException e) { throw new IOException("interrupted"); }
+        }
+        if (err[0] != null) throw err[0];
+        return n * bytes / Math.max(1e-3, (System.nanoTime() - t0) / 1e9);
+    }
+
     /** Writes bytes into a temporary file in dir (flushed to disk) and deletes it. Returns bytes/second. */
     public static double diskWrite(File dir, long bytes) throws IOException {
         File f = File.createTempFile("lanbeam-speed", ".tmp", dir);
