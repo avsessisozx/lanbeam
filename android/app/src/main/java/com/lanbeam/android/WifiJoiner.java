@@ -26,6 +26,9 @@ final class WifiJoiner {
         void onFailed(String reason);
     }
 
+    /** Long enough to approve the system "connect to this network" prompt; short enough not to look stuck. */
+    static final int TIMEOUT_MS = 30000;
+
     private final ConnectivityManager cm;
     private ConnectivityManager.NetworkCallback callback;
 
@@ -62,7 +65,7 @@ final class WifiJoiner {
                 cb.onFailed("Ağa bağlanılamadı (" + ssid + ")");
             }
         };
-        cm.requestNetwork(req, callback, 60000);
+        cm.requestNetwork(req, callback, TIMEOUT_MS);
     }
 
     private String gateway(Network network) {

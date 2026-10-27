@@ -71,12 +71,20 @@ public final class LoopbackTest {
         ShareLink l = ShareLink.parse("http://192.168.1.5:8081/s/abc?ssid=My%20Net&pass=p%26w");
         check(l.port == 8081 && l.token.equals("abc") && l.ssid.equals("My Net") && l.pass.equals("p&w"), "link parse");
         check(ShareLink.parse(l.toString()).pass.equals("p&w"), "link roundtrip");
+        Offer direct = Offer.fromJson(new Offer("id", "Telefon", new ShareLink("-", 8080, "tok", "DIRECT-ab", "p\"w"), 1, 5, "a.jpg").toJson(), "192.168.1.9");
+        check(direct.link.host.equals("192.168.1.9") && "DIRECT-ab".equals(direct.link.ssid) && "p\"w".equals(direct.link.pass), "direct offer carries hotspot");
+        check(Offer.fromJson(new Offer("id", "PC", new ShareLink("-", 8080, "tok", null, null), 1, 5, "a").toJson(), "h").link.ssid == null, "plain offer has no hotspot");
 
         // Speed test, disk test and report
         SpeedTest.Result sr = SpeedTest.run("127.0.0.1", sender.port(), 16L * 1024 * 1024);
         check(sr.downloadBps > 0 && sr.uploadBps > 0, "speedtest " + sr.summary());
         String par = SpeedTest.runParallel("127.0.0.1", sender.port(), 8L * 1024 * 1024);
-        check(par.contains("1 bağlantı") && par.contains("4 bağlantı"), "parallel speedtest " + par);
+        check(par.contains("2 bağlantı") && par.contains("4 bağlantı"), "parallel speedtest " + par);
+        // Time-based: an unbounded test must stop on time (~1 s warm-up + 4 s), not run through MAX_BYTES.
+        long t0 = System.nanoTime();
+        SpeedTest.Result timed = SpeedTest.run("127.0.0.1", sender.port(), SpeedTest.MAX_BYTES);
+        double secs = (System.nanoTime() - t0) / 1e9;
+        check(timed.downloadBps > 0 && timed.uploadBps > 0 && secs < 14, "timed speedtest " + timed.summary() + " in " + secs + " s");
         check(SpeedTest.diskWrite(tmp, 8L * 1024 * 1024) > 0, "disk write test");
         Diagnostics.info("Wi-Fi bandı", "5 GHz");
         Diagnostics.log("bağlandı 192.168.1.5:8080 /s/abcDEF123");

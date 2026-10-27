@@ -78,6 +78,8 @@ Okuma:
 
 ## 3. Yapılacaklar (öncelik sırasıyla)
 
+> **Durum (v0.4.0):** 3.1 ve 3.2 yapıldı. Ayrıntılar ve ölçümler en altta, "v0.4.0'da yapılanlar" bölümünde.
+
 ### 3.1 Hız testini düzelt (yanlış ölçüyor)
 `core/.../SpeedTest.java` ve `android/.../MainActivity.java` (satır ~378):
 - Test `MainActivity` içinde çalışıyor; **WifiLock (HIGH_PERF + LOW_LATENCY) ve WakeLock almıyor.**
@@ -114,3 +116,29 @@ adb shell "curl -s -o /dev/null -w '%{size_download} B, %{speed_download} B/s\n'
 ```
 Aynı dosyayı LanBeam ile gönderip iki sonucu karşılaştırın: uygulama hızı `curl` hızına yakınsa
 sınır ağdır, uygulamada aranacak bir şey yoktur.
+
+## 5. v0.4.0'da yapılanlar (27 Ekim, yerel oturum, gerçek telefonla denendi)
+
+### Hız testi (`core/.../SpeedTest.java`)
+- **Süreye bağlı:** her ölçüm 1 sn ısınma + 4 sn sayım. Isınma sayılmaz; `MAX_BYTES` (4 GB) yalnızca üst sınır,
+  test süre dolunca bağlantıyı kapatır. 1 bağlantı + 2 ve 4 paralel, toplam ~35 sn.
+- **Wi-Fi kilidi:** telefonda test süresince `LanBeamService.beginSpeedTest()/endSpeedTest()` aktarımla aynı
+  kilitleri alır. Başka bir cihaz bu telefona karşı test yaparken de `SpeedTest.serverHook` ile kilit alınır.
+- Gerçek ölçüm (PC ↔ Mi 10T Pro, PC'den çalıştırılan yeni test): PC→telefon 46–53 MB/s,
+  telefon→PC 72–77 MB/s (aynı anda `curl` 100 MB/s). İlk denemede telefon→PC 19,9 MB/s çıktı, tekrarlarda
+  çıkmadı: ağ dakikalar içinde çok değişiyor, tek ölçüme güvenmeyin.
+- Eski test aynı ağda 37,8 MB/s gösteriyordu.
+
+### Telefon ↔ telefon doğrudan gönderim
+- Telefonda bir Android cihaza dokununca seçim çıkar: **Doğrudan bağlantı** veya **Ev ağı üzerinden**.
+- Doğrudan: gönderen `LocalOnlyHotspot` açar; teklif yine ev ağından gider ama içinde hotspot adı/şifresi
+  vardır (`Offer` JSON'unda `ssid`/`pass`, protokolle geriye uyumlu). Alıcı kabul edince hotspot'a bağlanır
+  (`WifiJoiner`, Android 10+), dosyaları doğrudan çeker, bitince ev ağına döner. Gönderen hotspot'u kapatır.
+- **Yedek yol:** hotspot açılamazsa, teklif iletilemezse, izin verilmezse veya alıcı 30 sn içinde hotspot'a
+  bağlanamazsa aktarım ev ağı üzerinden yapılır.
+- Denendi: var olmayan ağ adıyla gönderilen doğrudan teklifte alıcı bağlanamadı, ev ağına geçti, 800 MB
+  55,5 MB/s ile geldi, MD5 aynı. (Bekleme ilk denemede 60 sn idi ve takılmış gibi görünüyordu; 30 sn'ye
+  indirildi ve durum satırı ne beklendiğini yazıyor.)
+- **Denenmedi:** gerçek iki telefon arasında doğrudan aktarım ve hızı (ikinci telefon gerekli).
+  LocalOnlyHotspot'un bandını (2,4/5 GHz) uygulama seçemez ve okuyamaz (`getBand()` sistem API'si);
+  hotspot 2,4 GHz açılırsa doğrudan yol ev ağından yavaş olabilir. İki telefonla ölçülmeli.

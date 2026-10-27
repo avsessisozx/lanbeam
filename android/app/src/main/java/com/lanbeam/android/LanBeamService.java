@@ -21,6 +21,7 @@ import android.os.Looper;
 import android.os.PowerManager;
 import android.provider.Settings;
 
+import com.lanbeam.core.Diagnostics;
 import com.lanbeam.core.FileSource;
 import com.lanbeam.core.LanBeamNode;
 import com.lanbeam.core.NetUtil;
@@ -74,6 +75,8 @@ public final class LanBeamService extends Service implements LanBeamNode.Listene
         volatile boolean finished, ok;
         volatile Runnable cancel;
         boolean locked;
+        /** Sent over this phone's hotspot: close the hotspot when the transfer ends. */
+        boolean direct;
 
         Transfer(String title, boolean outgoing, long total) {
             this.title = title;
@@ -114,6 +117,7 @@ public final class LanBeamService extends Service implements LanBeamNode.Listene
     public void onCreate() {
         super.onCreate();
         instance = this;
+        com.lanbeam.core.SpeedTest.serverHook = speedTestHook;
         createChannels();
         if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIF_SERVICE, serviceNotification("Başlatılıyor…"), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
         else startForeground(NOTIF_SERVICE, serviceNotification("Başlatılıyor…"));
@@ -154,7 +158,7 @@ public final class LanBeamService extends Service implements LanBeamNode.Listene
             Offer o = token == null ? null : pendingOffers.remove(token);
             getSystemService(NotificationManager.class).cancel(token == null ? 0 : token.hashCode());
             if (o != null) {
-                if (ACTION_ACCEPT.equals(a)) receive(o.link, o.fromName);
+                if (ACTION_ACCEPT.equals(a)) accept(o);
                 else node.reject(o);
             }
         }
@@ -164,6 +168,7 @@ public final class LanBeamService extends Service implements LanBeamNode.Listene
     @Override
     public void onDestroy() {
         instance = null;
+        com.lanbeam.core.SpeedTest.serverHook = null;
         stopHotspot();
         new Thread(node::stop).start();
         if (multicastLock.isHeld()) multicastLock.release();
@@ -256,9 +261,69 @@ public final class LanBeamService extends Service implements LanBeamNode.Listene
     }
 
     /** No router: start a local-only hotspot and put its credentials into the share link / QR. */
+    void startHotspot(final List<FileSource> files, final HotspotCallback cb) {
+        openHotspot(new HotspotOpened() {
+            @Override public void onOpened(String ssid, String pass) {
+                Share share = node.publish(files);
+                final Transfer t = track("📶 Hotspot: " + files.size() + " dosya", true, share.total);
+                t.status = "Hotspot açık (" + ssid + ") — diğer telefon QR'ı okutsun";
+                sendTransfers.put(share.token, t);
+                t.cancel = () -> { node.unpublish(share); stopHotspot(); end(t, false, "Kapatıldı"); };
+                changed();
+                cb.onReady(new ShareLink(hotspotHost(), node.port(), share.token, ssid, pass));
+            }
+
+            @Override public void onFailed(String reason) { cb.onFailed(reason); }
+        });
+    }
+
+    /**
+     * Phone to phone without the router in the middle: through a router every packet crosses the air twice,
+     * which roughly halves the speed. The offer still goes over the home network; it carries the hotspot
+     * name and password, and the receiving phone joins the hotspot to pull the files. Falls back to the
+     * normal route if the hotspot cannot be opened or the offer cannot be delivered.
+     */
+    void sendDirect(final Peer peer, final List<FileSource> files) {
+        openHotspot(new HotspotOpened() {
+            @Override public void onOpened(final String ssid, final String pass) {
+                final Share share = node.publish(files);
+                final Transfer t = track("⬆ " + peer.name + " (doğrudan): " + files.size() + " dosya", true, share.total);
+                t.direct = true;
+                sendTransfers.put(share.token, t);
+                t.cancel = () -> { node.unpublish(share); stopHotspot(); end(t, false, "İptal edildi"); };
+                t.status = "Doğrudan bağlantı hazır (" + ssid + ")…";
+                changed();
+                new Thread(() -> {
+                    try {
+                        node.sendOffer(peer, share, ssid, pass);
+                        t.status = "Karşı tarafın onayı bekleniyor… (doğrudan bağlantı)";
+                        changed();
+                    } catch (Exception e) {
+                        // This phone may have lost the home network when the hotspot started: use the normal route.
+                        node.unpublish(share);
+                        stopHotspot();
+                        end(t, false, "Doğrudan bağlantı kurulamadı, ev ağı üzerinden gönderiliyor");
+                        main.postDelayed(() -> sendTo(peer, files), 3000);
+                    }
+                }, "lanbeam-offer-direct").start();
+            }
+
+            @Override public void onFailed(String reason) {
+                Diagnostics.log("doğrudan gönderim: " + reason);
+                sendTo(peer, files);
+            }
+        });
+    }
+
+    private interface HotspotOpened {
+        void onOpened(String ssid, String pass);
+
+        void onFailed(String reason);
+    }
+
     @SuppressWarnings("deprecation")
     @SuppressLint("MissingPermission")
-    void startHotspot(final List<FileSource> files, final HotspotCallback cb) {
+    private void openHotspot(final HotspotOpened cb) {
         stopHotspot();
         WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
         try {
@@ -275,15 +340,7 @@ public final class LanBeamService extends Service implements LanBeamNode.Listene
                         ssid = c == null ? null : c.SSID;
                         pass = c == null ? null : c.preSharedKey;
                     }
-                    ssid = unquote(ssid);
-                    pass = unquote(pass);
-                    Share share = node.publish(files);
-                    final Transfer t = track("📶 Hotspot: " + files.size() + " dosya", true, share.total);
-                    t.status = "Hotspot açık (" + ssid + ") — diğer telefon QR'ı okutsun";
-                    sendTransfers.put(share.token, t);
-                    t.cancel = () -> { node.unpublish(share); stopHotspot(); end(t, false, "Kapatıldı"); };
-                    changed();
-                    cb.onReady(new ShareLink(hotspotHost(), node.port(), share.token, ssid, pass));
+                    cb.onOpened(unquote(ssid), unquote(pass));
                 }
 
                 @Override public void onFailed(int reason) {
@@ -330,9 +387,22 @@ public final class LanBeamService extends Service implements LanBeamNode.Listene
     // ------------------------------------------------------------------ receiving
 
     void receive(final ShareLink link, String from) {
+        receive(link, from, false);
+    }
+
+    /**
+     * lanFallback: the link came in an offer over the home network, so its host is reachable without the
+     * hotspot. If joining the sender's hotspot fails, the files are pulled over the home network instead.
+     */
+    private void receive(final ShareLink link, String from, final boolean lanFallback) {
         final Transfer t = track("⬇ " + from + " → " + DownloadsSink.displayRoot(), false, 0);
         lock(t);
+        final ShareLink viaLan = new ShareLink(link.host, link.port, link.token, null, null);
         if (link.ssid != null && !link.ssid.isEmpty()) {
+            if (!WifiJoiner.supported() && lanFallback) {
+                startReceiver(viaLan, t, null);
+                return;
+            }
             if (!WifiJoiner.supported()) {
                 t.status = "Önce Wi-Fi ayarlarından \"" + link.ssid + "\" ağına bağlanın (şifre: " + link.pass + ")";
                 changed();
@@ -340,7 +410,8 @@ public final class LanBeamService extends Service implements LanBeamNode.Listene
                 return;
             }
             final WifiJoiner joiner = new WifiJoiner(this);
-            t.status = "\"" + link.ssid + "\" ağına bağlanılıyor… (onay isteyebilir)";
+            t.status = "\"" + link.ssid + "\" ağına bağlanılıyor… (onay isteyebilir, en fazla "
+                    + WifiJoiner.TIMEOUT_MS / 1000 + " sn" + (lanFallback ? "; olmazsa ev ağından alınır)" : ")");
             t.cancel = () -> { joiner.release(); end(t, false, "İptal edildi"); };
             changed();
             joiner.join(link.ssid, link.pass, new WifiJoiner.Callback() {
@@ -350,7 +421,14 @@ public final class LanBeamService extends Service implements LanBeamNode.Listene
 
                 @Override public void onFailed(String reason) {
                     joiner.release();
-                    end(t, false, reason);
+                    if (lanFallback) {
+                        Diagnostics.log("doğrudan alım: " + reason + "; ev ağı kullanılıyor");
+                        t.status = "Doğrudan bağlantı kurulamadı, ev ağı üzerinden alınıyor…";
+                        changed();
+                        startReceiver(viaLan, t, null);
+                    } else {
+                        end(t, false, reason);
+                    }
                 }
             });
         } else {
@@ -414,6 +492,23 @@ public final class LanBeamService extends Service implements LanBeamNode.Listene
         t.locked = false;
         releaseTransferLocks(false);
     }
+
+    private final Transfer speedTestToken = new Transfer("speed test", false, 0);
+
+    /** The speed test must run under the same Wi-Fi locks as a transfer, or it measures power-save mode. */
+    void beginSpeedTest() { lock(speedTestToken); }
+
+    void endSpeedTest() { unlock(speedTestToken); }
+
+    private final Transfer servedTestToken = new Transfer("served speed test", false, 0);
+    private final java.util.concurrent.atomic.AtomicInteger servedTests = new java.util.concurrent.atomic.AtomicInteger();
+
+    /** A PC or phone measuring against us: hold the locks while any of its (parallel) test streams runs. */
+    private final com.lanbeam.core.SpeedTest.ServerHook speedTestHook = new com.lanbeam.core.SpeedTest.ServerHook() {
+        @Override public void begin() { if (servedTests.incrementAndGet() == 1) lock(servedTestToken); }
+
+        @Override public void end() { if (servedTests.decrementAndGet() == 0) unlock(servedTestToken); }
+    };
 
     void clearFinished() {
         for (Transfer t : transfers) if (t.finished) transfers.remove(t);
@@ -485,6 +580,7 @@ public final class LanBeamService extends Service implements LanBeamNode.Listene
         // A link/QR share may be downloaded again, so it stays published until closed.
         if (ok && t.title.startsWith("⬆")) {
             node.unpublish(share);
+            if (t.direct) stopHotspot();
             end(t, true, "Tamamlandı — " + NetUtil.formatSize(share.total) + " • ort. " + NetUtil.formatSpeed(t.bps));
             return;
         }
@@ -495,10 +591,11 @@ public final class LanBeamService extends Service implements LanBeamNode.Listene
     @Override public void onRejected(Share share) {
         node.unpublish(share);
         Transfer t = sendTransfers.remove(share.token);
+        if (t != null && t.direct) stopHotspot();
         if (t != null) end(t, false, "Karşı taraf reddetti");
     }
 
-    void accept(Offer o) { receive(o.link, o.fromName); }
+    void accept(Offer o) { receive(o.link, o.fromName, true); }
 
     void reject(Offer o) { node.reject(o); }
 

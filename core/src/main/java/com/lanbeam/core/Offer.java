@@ -31,13 +31,19 @@ public final class Offer {
         m.put("count", count);
         m.put("total", total);
         m.put("first", firstName);
+        if (link.ssid != null) {
+            // Direct mode: the sender opened a hotspot; the receiver joins it instead of going through the router.
+            m.put("ssid", link.ssid);
+            m.put("pass", link.pass);
+        }
         return Json.write(m);
     }
 
     /** The sender's host is taken from the TCP connection, which is always reachable from the receiver. */
     static Offer fromJson(String json, String senderHost) {
         Map<String, Object> m = Json.parseObject(json);
-        ShareLink link = new ShareLink(senderHost, (int) Json.num(m, "port", Protocol.HTTP_PORT), Json.str(m, "token", ""), null, null);
+        ShareLink link = new ShareLink(senderHost, (int) Json.num(m, "port", Protocol.HTTP_PORT), Json.str(m, "token", ""),
+                Json.str(m, "ssid", null), Json.str(m, "pass", null));
         return new Offer(Json.str(m, "fromId", ""), Json.str(m, "fromName", "?"), link,
                 (int) Json.num(m, "count", 0), Json.num(m, "total", 0), Json.str(m, "first", ""));
     }

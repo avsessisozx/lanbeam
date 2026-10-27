@@ -32,6 +32,8 @@ Hazır dosyalar **Releases** sayfasında: `LanBeam-x.y.z.jar` (PC) ve `LanBeam-x
 ### Android
 - Uygulama açıkken arka planda "alıma hazır" bildirimiyle çalışır; PC veya başka telefon her an dosya önerebilir.
 - **Gönder:** *Dosya seç* / *Klasör seç* (veya herhangi bir uygulamada *Paylaş → LanBeam*) → listedeki cihaza dokunun.
+- **Telefondan telefona:** cihaza dokununca *Doğrudan bağlantı* seçilebilir. Gönderen telefon geçici bir hotspot açar,
+  alıcı aktarım süresince ona bağlanır; veri router'dan geçmediği için genelde daha hızlıdır. Olmazsa ev ağı kullanılır.
 - **QR / bağlantı:** Aynı ağdaki telefon *QR tara* ile alır, diğerleri tarayıcıdan.
 - **Router olmadan:** Telefon yerel bir hotspot açar, SSID+şifreyi QR'a koyar; diğer telefon (Android 10+)
   *QR tara* yapınca bu ağa bağlanıp dosyaları çeker.

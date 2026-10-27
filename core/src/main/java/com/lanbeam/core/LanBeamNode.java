@@ -88,9 +88,14 @@ public final class LanBeamNode {
 
     /** Pushes an offer to a peer; the peer pulls the share if its user accepts. */
     public void sendOffer(Peer peer, Share share) throws IOException {
+        sendOffer(peer, share, null, null);
+    }
+
+    /** With ssid/pass the receiver first joins that Wi-Fi (the sender's hotspot) and pulls over the direct link. */
+    public void sendOffer(Peer peer, Share share, String ssid, String pass) throws IOException {
         String first = share.files.isEmpty() ? "" : share.files.get(0).path();
         int slash = first.lastIndexOf('/');
-        Offer o = new Offer(id, name, linkFor(share, "-"), share.files.size(), share.total, first.substring(slash + 1));
+        Offer o = new Offer(id, name, new ShareLink("-", port, share.token, ssid, pass), share.files.size(), share.total, first.substring(slash + 1));
         post(peer.baseUrl() + "/api/offer", o.toJson());
     }
 

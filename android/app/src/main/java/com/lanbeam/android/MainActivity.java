@@ -41,6 +41,8 @@ public final class MainActivity extends Activity implements LanBeamService.UiLis
     private static final int REQ_TREE = 11;
     private static final int REQ_PERMS = 20;
     private static final int REQ_HOTSPOT_PERMS = 21;
+    private static final int REQ_DIRECT_PERMS = 22;
+    private Peer pendingDirectPeer;
 
     private final List<FileSource> selected = new ArrayList<>();
     private TextView selfInfo, selection, peersEmpty, transfersEmpty;
@@ -188,11 +190,40 @@ public final class MainActivity extends Activity implements LanBeamService.UiLis
 
     // ------------------------------------------------------------------ actions
 
-    private void sendTo(Peer p) {
+    private void sendTo(final Peer p) {
         LanBeamService s = LanBeamService.get();
         if (s == null || needFiles()) return;
-        s.sendTo(p, new ArrayList<>(selected));
-        Toast.makeText(this, p.name + " cihazına teklif gönderildi", Toast.LENGTH_SHORT).show();
+        if (!"android".equals(p.os)) {
+            s.sendTo(p, new ArrayList<>(selected));
+            Toast.makeText(this, p.name + " cihazına teklif gönderildi", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        // Phone to phone: through the router every packet crosses the air twice, a direct link avoids that.
+        new AlertDialog.Builder(this).setTitle(p.name + " cihazına gönder")
+                .setItems(new String[]{
+                        "Doğrudan bağlantı (telefonlar arası, genelde daha hızlı)",
+                        "Ev ağı üzerinden"}, (d, which) -> {
+                    if (which == 0) sendDirect(p);
+                    else {
+                        s.sendTo(p, new ArrayList<>(selected));
+                        Toast.makeText(this, p.name + " cihazına teklif gönderildi", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Vazgeç", null).show();
+    }
+
+    private void sendDirect(Peer p) {
+        String perm = Build.VERSION.SDK_INT >= 33 ? Manifest.permission.NEARBY_WIFI_DEVICES : Manifest.permission.ACCESS_FINE_LOCATION;
+        if (checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) {
+            pendingDirectPeer = p;
+            requestPermissions(Build.VERSION.SDK_INT >= 33 ? new String[]{perm}
+                    : new String[]{perm, Manifest.permission.ACCESS_COARSE_LOCATION}, REQ_DIRECT_PERMS);
+            return;
+        }
+        LanBeamService s = LanBeamService.get();
+        if (s == null || needFiles()) return;
+        s.sendDirect(p, new ArrayList<>(selected));
+        Toast.makeText(this, "Doğrudan bağlantı açılıyor…", Toast.LENGTH_SHORT).show();
     }
 
     private void showLinkQr() {
@@ -229,6 +260,17 @@ public final class MainActivity extends Activity implements LanBeamService.UiLis
     public void onRequestPermissionsResult(int req, String[] perms, int[] results) {
         super.onRequestPermissionsResult(req, perms, results);
         if (req == REQ_HOTSPOT_PERMS && results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) startHotspot();
+        if (req == REQ_DIRECT_PERMS && pendingDirectPeer != null) {
+            Peer p = pendingDirectPeer;
+            pendingDirectPeer = null;
+            LanBeamService s = LanBeamService.get();
+            if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) sendDirect(p);
+            else if (s != null && !selected.isEmpty()) {
+                // No permission for the hotspot: still send, over the home network.
+                s.sendTo(p, new ArrayList<>(selected));
+                Toast.makeText(this, "İzin verilmedi, ev ağı üzerinden gönderiliyor", Toast.LENGTH_LONG).show();
+            }
+        }
     }
 
     private void showQrDialog(String title, ShareLink link, String hint) {
@@ -369,20 +411,24 @@ public final class MainActivity extends Activity implements LanBeamService.UiLis
 
     private void runSpeedTest(final Peer p) {
         final AlertDialog[] dlg = new AlertDialog[1];
-        dlg[0] = new AlertDialog.Builder(this).setTitle("Hız testi").setMessage("Ölçülüyor… (yaklaşık 20 sn)")
+        dlg[0] = new AlertDialog.Builder(this).setTitle("Hız testi").setMessage("Ölçülüyor… (yaklaşık 35 sn)")
                 .setCancelable(false).create();
         dlg[0].show();
+        final LanBeamService svc = LanBeamService.get();
         new Thread(() -> {
             String msg;
+            if (svc != null) svc.beginSpeedTest();
             try {
-                com.lanbeam.core.SpeedTest.Result r = com.lanbeam.core.SpeedTest.run(p.host, p.port, com.lanbeam.core.SpeedTest.DEFAULT_BYTES);
-                String par = com.lanbeam.core.SpeedTest.runParallel(p.host, p.port, 32L * 1024 * 1024);
-                double disk = com.lanbeam.core.SpeedTest.diskWrite(getCacheDir(), 64L * 1024 * 1024);
-                msg = "Ağ: " + r.summary() + "\n\nParalel bağlantılar:\n" + par + "\n\nTelefon depolama yazma: " + NetUtil.formatSpeed(disk)
+                com.lanbeam.core.SpeedTest.Result r = com.lanbeam.core.SpeedTest.run(p.host, p.port, com.lanbeam.core.SpeedTest.MAX_BYTES);
+                String par = com.lanbeam.core.SpeedTest.runParallel(p.host, p.port, com.lanbeam.core.SpeedTest.MAX_BYTES);
+                double disk = com.lanbeam.core.SpeedTest.diskWrite(getCacheDir(), 256L * 1024 * 1024);
+                msg = "Ağ (1 bağlantı): " + r.summary() + "\n\nParalel bağlantılar:\n" + par + "\n\nTelefon depolama yazma: " + NetUtil.formatSpeed(disk)
                         + "\n\nGerçek aktarım hızı bu değerlerin küçüğünü geçemez. Sonuçlar rapora eklendi.";
             } catch (Exception e) {
                 com.lanbeam.core.Diagnostics.log("hız testi hatası: " + e);
                 msg = "Ölçüm yapılamadı: " + e.getMessage();
+            } finally {
+                if (svc != null) svc.endSpeedTest();
             }
             final String m = msg;
             runOnUiThread(() -> {
@@ -437,7 +483,9 @@ public final class MainActivity extends Activity implements LanBeamService.UiLis
         new AlertDialog.Builder(this)
                 .setTitle("Gelen dosyalar")
                 .setMessage(offer.fromName + " size dosya göndermek istiyor:\n\n" + offer.describe()
-                        + "\n\nKayıt yeri: " + DownloadsSink.displayRoot())
+                        + "\n\nKayıt yeri: " + DownloadsSink.displayRoot()
+                        + (offer.link.ssid == null ? "" : "\n\nDoğrudan bağlantı: telefonunuz aktarım süresince \""
+                        + offer.link.ssid + "\" ağına bağlanacak (onay isteyebilir), bitince ev ağına döner."))
                 .setCancelable(false)
                 .setPositiveButton("Kabul et", (d, w) -> s.accept(offer))
                 .setNegativeButton("Reddet", (d, w) -> s.reject(offer))
