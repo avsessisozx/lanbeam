@@ -13,6 +13,12 @@
 - Android arayüzü gerçek telefonda görülmedi (yalnız CI'da derlendi, lint'ten geçti).
 - Windows arayüzü gerçek Windows'ta (yazı tipi, ölçek) denenmedi.
 
+## Public öncesi (27 Ekim)
+- Geçmiş taraması: gerçek sır/anahtar yok (yalnız bilerek konan paylaşımlı imza). Commit yazarları noreply.
+- THIRD_PARTY_NOTICES.md eklendi (zxing, zxing-android-embedded, Gradle: Apache 2.0); sürümlere de ekleniyor.
+- Açık: LICENSE'ta tam ad var (karar kullanıcıda); Actions'taki eski LANBEAM_KEYSTORE_* secret'ları silinebilir.
+- v0.2.0 Actions'tan elle yayınlandı (Run workflow + sürüm).
+
 ## Kalan / bilinen
-- v0.2.0 etiketi oturumdan itilemedi (403); kullanıcı kendi bilgisayarından itecek: git tag v0.2.0 && git push origin v0.2.0
+- Etiket oturumdan itilemez (403): sürüm, Actions > Build > Run workflow ile yayınlanır.
 - Eski kurulu APK farklı anahtarla imzalı: yeni sürüm üstüne kurulmaz, bir kez silip kurmak gerekir.
