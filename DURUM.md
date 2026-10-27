@@ -1,9 +1,17 @@
-# LanBeam — durum (27 Ekim 2026, v0.3.2 yayınlandı)
+# LanBeam — durum (27 Ekim 2026, v0.4.0 yayınlandı)
 
 ## Yapıldı
 - Android ve Windows arayüzü yenilendi (kart düzeni, açık/koyu tema; Windows'ta Ayarlar'dan tema seçimi).
 - İmza: depodaki sabit anahtar (android/keystore/lanbeam-shared.jks) ile; secret/yerel dosya gerekmez.
 - Özgünlük taraması: başka uygulamadan kopya kod/isim bulunmadı (kendi protokolü, MIT).
+
+## v0.4.0 (27 Ekim, yerel oturum: gerçek PC + Mi 10T Pro ile denendi)
+- Ayrıntılar ve ölçümler: main dalında docs/HIZ-ANALIZI.md (SuperBeam incelemesi dahil).
+- Sonuç: uygulama ağ kapasitesinin ~%95'ini kullanıyor; sınır Wi-Fi/modem (aynı cihazlarla 26 Ekim 89,9 MB/s, 27 Ekim 34–50 MB/s).
+- Hız testi süreye bağlı (1 sn ısınma + 4 sn) ve Wi-Fi kilidiyle çalışıyor; eski 48 MB'lık test gerçek hızın yarısını gösteriyordu.
+- Telefon → telefon "Doğrudan bağlantı" (gönderen hotspot açar, alıcı ona bağlanır); olmazsa ev ağına düşer (30 sn).
+- Denendi: yeni hız testi telefonla; doğrudan teklifin yedek yolu (800 MB, 55,5 MB/s, MD5 aynı). Denenmedi: iki gerçek telefon arasında doğrudan aktarım.
+- İmza ve yayın yöntemi değişmedi (repodaki ortak anahtar, Actions > Build > Run workflow).
 
 ## v0.3.0 (27 Ekim): hız testi ve rapor
 - Android + PC: Wi-Fi bandı/hızı/sinyal gösterimi (2,4 GHz ve zayıf sinyalde ipucu), hız testi (ağ + depolama), "Rapor / Geri bildirim" (kopyala, paylaş, GitHub'da bildir).
