@@ -1,4 +1,4 @@
-# LanBeam — durum (27 Ekim 2026, v0.3.1 yayınlandı)
+# LanBeam — durum (27 Ekim 2026, v0.3.2 yayınlandı)
 
 ## Yapıldı
 - Android ve Windows arayüzü yenilendi (kart düzeni, açık/koyu tema; Windows'ta Ayarlar'dan tema seçimi).
@@ -9,6 +9,11 @@
 - Android + PC: Wi-Fi bandı/hızı/sinyal gösterimi (2,4 GHz ve zayıf sinyalde ipucu), hız testi (ağ + depolama), "Rapor / Geri bildirim" (kopyala, paylaş, GitHub'da bildir).
 - Her aktarımda ağ/depolama süresi ölçülür; rapor darboğazı söyler. Rapor dosya adı, IP, SSID, cihaz adı, anahtar içermez; kendiliğinden gönderilmez.
 - Otomatik tampon/paralel bağlantı ayarı EKLENMEDİ: tek akış zaten bağlantıyı doyuruyor, ölçüm yapmadan değiştirmek riskli.
+
+## v0.3.2 (27 Ekim)
+- Android: çökme kaydı eklendi (sonraki açılışta rapora "Önceki çökme" olarak girer).
+- BİLİNEN HATA: telefonda QR seçeneği (hangisi, "QR göster" mi "QR tara" mı belirsiz) uygulamayı çökertiyor; neden bilinmiyor, rapor bekleniyor.
+- Paralel hız testi: PC→telefon yönünde paralel bağlantı hız artırmadı (47,6/44,0/41,3 MB/s), sınır Wi-Fi/yönlendirici; telefon→PC ölçümü tutarsız (tekrar gerekli). Paralel aktarım şimdilik eklenmedi.
 
 ## v0.3.1 (27 Ekim)
 - Hız testine 1/2/4 paralel bağlantı ölçümü eklendi (tek akış mı sınır, görmek için). Gerçek telefonda sonucu henüz görülmedi.
