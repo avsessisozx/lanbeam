@@ -284,6 +284,14 @@ public final class LanBeamService extends Service implements LanBeamNode.Listene
      * normal route if the hotspot cannot be opened or the offer cannot be delivered.
      */
     void sendDirect(final Peer peer, final List<FileSource> files) {
+        stopHotspot();
+        if (regularHotspotOn()) {
+            // The phone's normal hotspot is already on: a second (local-only) hotspot cannot start and the
+            // attempt only wastes time. The other phone is on this hotspot, so the normal route is the direct one.
+            Diagnostics.log("doğrudan gönderim atlandı: normal hotspot açık, doğrudan hotspot üzerinden gönderiliyor");
+            sendTo(peer, files);
+            return;
+        }
         openHotspot(new HotspotOpened() {
             @Override public void onOpened(final String ssid, final String pass) {
                 final Share share = node.publish(files);
@@ -364,6 +372,21 @@ public final class LanBeamService extends Service implements LanBeamNode.Listene
     private static String unquote(String s) {
         if (s != null && s.length() >= 2 && s.startsWith("\"") && s.endsWith("\"")) return s.substring(1, s.length() - 1);
         return s;
+    }
+
+    /** True when an access-point interface (the phone's own hotspot) is already up. */
+    private static boolean regularHotspotOn() {
+        try {
+            for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+                if (!ni.isUp() || ni.isLoopback()) continue;
+                String n = ni.getName();
+                if (!(n.startsWith("ap") || n.startsWith("swlan") || n.startsWith("softap"))) continue;
+                for (InetAddress a : Collections.list(ni.getInetAddresses()))
+                    if (a instanceof Inet4Address) return true;
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 
     /** Address of the hotspot interface (ap0 / swlan0 / wlan1 …); receivers also fall back to the gateway. */
