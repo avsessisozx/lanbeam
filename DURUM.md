@@ -1,5 +1,11 @@
 # LanBeam — durum (27 Ekim 2026, v0.4.0 yayınlandı)
 
+## 3 Kasım 2026 (bulut oturumu, sürüm numarası değişmedi, main'e birleştirildi)
+- Android: normal hotspot açıkken "Doğrudan bağlantı" artık denenmez, hemen normal yola geçer (eskiden ~28 sn kaybediyordu). Doğrulandı: CI (derleme+lint, PC testi) geçti. Doğrulanmadı: gerçek telefonda.
+- Okuma/gönderme çakışması incelendi, eklenmedi: 1 MB soket tamponu ağ boşalırken sonraki 1 MB'ı okumaya yetiyor, kazanç beklenmiyor.
+- Karar: Wi-Fi Direct eklenmeyecek.
+- Açık: Quick Share ile aynı 1,2 GB dosya süre karşılaştırması ölçülmedi; hotspot 5 GHz olmalı.
+
 ## Yapıldı
 - Android ve Windows arayüzü yenilendi (kart düzeni, açık/koyu tema; Windows'ta Ayarlar'dan tema seçimi).
 - İmza: depodaki sabit anahtar (android/keystore/lanbeam-shared.jks) ile; secret/yerel dosya gerekmez.
