@@ -199,17 +199,32 @@ public final class MainActivity extends Activity implements LanBeamService.UiLis
             return;
         }
         // Phone to phone: through the router every packet crosses the air twice, a direct link avoids that.
-        new AlertDialog.Builder(this).setTitle(p.name + " cihazına gönder")
-                .setItems(new String[]{
-                        "Doğrudan bağlantı (telefonlar arası, genelde daha hızlı)",
-                        "Ev ağı üzerinden"}, (d, which) -> {
-                    if (which == 0) sendDirect(p);
-                    else {
+        // On a slow network (2.4 GHz, weak signal) the direct link is recommended and listed first.
+        final boolean slow = LinkInfo.read(this).slow();
+        final String direct = "Doğrudan bağlantı (telefonlar arası, genelde daha hızlı)";
+        final String lan = "Ev ağı üzerinden";
+        final String[] items = slow
+                ? new String[]{"Önerilen: " + direct, lan}
+                : new String[]{direct, lan};
+        AlertDialog.Builder b = new AlertDialog.Builder(this).setTitle(p.name + " cihazına gönder");
+        if (slow) b.setMessage("Bağlı olduğunuz Wi-Fi yavaş görünüyor (2,4 GHz veya zayıf sinyal). Doğrudan bağlantı bu ağı kullanmaz, çok daha hızlı olabilir.");
+        // setMessage hides setItems lists, so build the choice as buttons when a message is shown.
+        if (slow) {
+            b.setPositiveButton("Doğrudan bağlantı (önerilen)", (d, w) -> sendDirect(p))
+                    .setNeutralButton(lan, (d, w) -> {
                         s.sendTo(p, new ArrayList<>(selected));
                         Toast.makeText(this, p.name + " cihazına teklif gönderildi", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("Vazgeç", null).show();
+                    });
+        } else {
+            b.setItems(items, (d, which) -> {
+                if (which == 0) sendDirect(p);
+                else {
+                    s.sendTo(p, new ArrayList<>(selected));
+                    Toast.makeText(this, p.name + " cihazına teklif gönderildi", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+        b.setNegativeButton("Vazgeç", null).show();
     }
 
     private void sendDirect(Peer p) {

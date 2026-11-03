@@ -28,6 +28,11 @@ final class LinkInfo {
         this.hint = hint;
     }
 
+    /** Home network is slow (2.4 GHz, weak signal or low link speed): a direct phone-to-phone link is likely faster. */
+    boolean slow() {
+        return wifi && ((mhz > 0 && mhz < 3000) || (rssi != 0 && rssi < -72) || (linkMbps > 0 && linkMbps < 300));
+    }
+
     @SuppressWarnings("deprecation")
     static LinkInfo read(Context ctx) {
         Diagnostics.info("Telefon", Build.MANUFACTURER + " " + Build.MODEL);
