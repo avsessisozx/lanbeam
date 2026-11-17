@@ -107,7 +107,7 @@ public final class Discovery {
                     send(announcement.getBytes(HttpServer.UTF8), p.getAddress());
                 }
                 if (!np.sameAs(old)) listener.onPeersChanged(peers());
-            } catch (Exception e) {
+            } catch (Exception | StackOverflowError e) {
                 if (!running) return;
             }
         }

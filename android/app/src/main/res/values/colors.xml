@@ -14,4 +14,6 @@
     <color name="header_start">#1565C0</color>
     <color name="header_end">#00897B</color>
     <color name="track">#DCE3F0</color>
+    <color name="accent_teal">#00897B</color>
+    <color name="accent_violet">#6A1B9A</color>
 </resources>

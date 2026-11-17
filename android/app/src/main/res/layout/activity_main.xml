@@ -16,32 +16,48 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@drawable/bg_header"
-            android:orientation="vertical"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
             android:padding="20dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/app_name"
-                android:textColor="#FFFFFF"
-                android:textSize="28sp"
-                android:textStyle="bold" />
+            <ImageView
+                android:layout_width="62dp"
+                android:layout_height="62dp"
+                android:contentDescription="@null"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_launcher" />
 
-            <TextView
-                android:id="@+id/self_info"
-                android:layout_width="match_parent"
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:paddingTop="6dp"
-                android:textColor="#E6FFFFFF"
-                android:textSize="14sp" />
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingTop="2dp"
-                android:text="Alıma hazır · aynı ağdaki cihazlar seni görebilir"
-                android:textColor="#B3FFFFFF"
-                android:textSize="12sp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textColor="#FFFFFF"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/self_info"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="4dp"
+                    android:textColor="#F2FFFFFF"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="2dp"
+                    android:text="Alıma hazır · aynı ağdaki cihazlar seni görebilir"
+                    android:textColor="#CCFFFFFF"
+                    android:textSize="12sp" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- What to send -->
@@ -49,6 +65,7 @@
 
             <TextView
                 style="@style/Section"
+                android:drawableStart="@drawable/ic_upload_accent"
                 android:text="Gönderilecekler" />
 
             <LinearLayout
@@ -59,12 +76,14 @@
                 <Button
                     android:id="@+id/pick_files"
                     style="@style/BtnTonal"
-                    android:text="📄  Dosya seç" />
+                    android:drawableStart="@drawable/ic_file_add"
+                    android:text="Dosya seç" />
 
                 <Button
                     android:id="@+id/pick_folder"
                     style="@style/BtnTonal"
-                    android:text="📁  Klasör seç" />
+                    android:drawableStart="@drawable/ic_folder_add"
+                    android:text="Klasör seç" />
             </LinearLayout>
 
             <LinearLayout
@@ -100,12 +119,14 @@
                     style="@style/Section"
                     android:layout_width="0dp"
                     android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_devices_accent"
                     android:text="Yakındaki cihazlar" />
 
                 <Button
                     android:id="@+id/refresh"
                     style="@style/BtnText"
-                    android:text="⟳  Yenile" />
+                    android:drawableStart="@drawable/ic_refresh_accent"
+                    android:text="Yenile" />
             </LinearLayout>
 
             <LinearLayout
@@ -132,6 +153,7 @@
 
             <TextView
                 style="@style/Section"
+                android:drawableStart="@drawable/ic_link_accent"
                 android:text="Diğer yollar" />
 
             <LinearLayout
@@ -142,12 +164,14 @@
                 <Button
                     android:id="@+id/show_qr"
                     style="@style/BtnTonal"
-                    android:text="▦  QR / bağlantı" />
+                    android:drawableStart="@drawable/ic_qr"
+                    android:text="QR / bağlantı" />
 
                 <Button
                     android:id="@+id/hotspot"
                     style="@style/BtnTonal"
-                    android:text="📶  Router olmadan" />
+                    android:drawableStart="@drawable/ic_wifi"
+                    android:text="Router olmadan" />
             </LinearLayout>
 
             <LinearLayout
@@ -157,12 +181,14 @@
                 <Button
                     android:id="@+id/scan"
                     style="@style/BtnTonal"
-                    android:text="📷  QR tara (al)" />
+                    android:drawableStart="@drawable/ic_scan"
+                    android:text="QR tara (al)" />
 
                 <Button
                     android:id="@+id/from_link"
                     style="@style/BtnTonal"
-                    android:text="🔗  Bağlantıdan al" />
+                    android:drawableStart="@drawable/ic_link"
+                    android:text="Bağlantıdan al" />
             </LinearLayout>
         </LinearLayout>
 
@@ -178,6 +204,7 @@
                     style="@style/Section"
                     android:layout_width="0dp"
                     android:layout_weight="1"
+                    android:drawableStart="@drawable/ic_speed_accent"
                     android:text="Aktarımlar" />
 
                 <Button
@@ -208,6 +235,7 @@
             <TextView
                 style="@style/Section"
                 android:layout_width="match_parent"
+                android:drawableStart="@drawable/ic_report_accent"
                 android:text="Bağlantı ve rapor" />
 
             <TextView
@@ -241,7 +269,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="8dp"
                     android:layout_weight="1"
-                    android:text="⚡  Hız testi" />
+                    android:drawableStart="@drawable/ic_speed"
+                    android:text="Hız testi" />
 
                 <Button
                     android:id="@+id/report"
@@ -249,7 +278,8 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="📋  Rapor / Geri bildirim" />
+                    android:drawableStart="@drawable/ic_report"
+                    android:text="Rapor / Geri bildirim" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

@@ -14,14 +14,12 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
-import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -86,6 +84,8 @@ public final class PcApp implements LanBeamNode.Listener {
     private final JLabel transfersEmpty = new JLabel("Henüz aktarım yok. Gönderirken veya alırken burada görünür.");
     private final JPanel transfers = new JPanel();
     private final Map<String, TransferRow> sendRows = new ConcurrentHashMap<>();
+    /** Shares pushed to one chosen device: closed as soon as the transfer ends (link shares stay open until closed). */
+    private final java.util.Set<String> offerTokens = java.util.Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     private Widgets.Btn sendBtn;
 
     public static void main(String[] args) {
@@ -126,7 +126,7 @@ public final class PcApp implements LanBeamNode.Listener {
         try {
             node.start();
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(frame, "Sunucu başlatılamadı (8080-8089 portları dolu olabilir):\n" + e, "LanBeam", JOptionPane.ERROR_MESSAGE);
+            Dialogs.message(frame, "LanBeam", "Sunucu başlatılamadı (8080-8089 portları dolu olabilir):\n" + e, Dialogs.Level.ERROR);
         }
         selfLabel.setText(deviceName() + "  •  " + NetUtil.primaryHost() + ":" + node.port());
         saveLabel.setText("Gelen dosyalar: " + saveDir().getAbsolutePath());
@@ -138,6 +138,15 @@ public final class PcApp implements LanBeamNode.Listener {
         frame = new JFrame("LanBeam");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setMinimumSize(new Dimension(940, 640));
+        java.util.List<java.awt.Image> icons = new java.util.ArrayList<>();
+        for (int sz : new int[]{16, 32, 64, 256}) {
+            java.awt.image.BufferedImage im = new java.awt.image.BufferedImage(sz, sz, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+            Graphics2D ig = Widgets.g2(im.getGraphics());
+            Widgets.logo(ig, 0, 0, sz);
+            ig.dispose();
+            icons.add(im);
+        }
+        frame.setIconImages(icons);
         frame.setContentPane(buildContent());
         frame.setSize(1060, 720);
         frame.setLocationRelativeTo(null);
@@ -164,11 +173,23 @@ public final class PcApp implements LanBeamNode.Listener {
         hl.add(selfLabel);
         hl.add(saveLabel);
         header.add(hl, BorderLayout.CENTER);
+        JComponent mark = new JComponent() {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = Widgets.g2(g);
+                Widgets.logo(g2, 0, 0, 62);
+                g2.dispose();
+            }
+        };
+        mark.setPreferredSize(new Dimension(62, 62));
+        JPanel markHolder = new JPanel(new GridBagLayout());
+        markHolder.setOpaque(false);
+        markHolder.add(mark);
+        header.add(markHolder, BorderLayout.WEST);
         JPanel hb = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         hb.setOpaque(false);
-        hb.add(btn("Bağlantıdan al…", Widgets.Kind.HEADER, this::receiveFromLink));
-        hb.add(btn("Bağlantı / Rapor", Widgets.Kind.HEADER, () -> ReportDialog.show(frame, peerList.getSelectedValue(), saveDir())));
-        hb.add(btn("Ayarlar", Widgets.Kind.HEADER, this::settings));
+        hb.add(btn("Bağlantıdan al…", Widgets.Kind.HEADER, Widgets.Ico.DOWNLOAD, this::receiveFromLink));
+        hb.add(btn("Bağlantı / Rapor", Widgets.Kind.HEADER, Widgets.Ico.REPORT, () -> ReportDialog.show(frame, peerList.getSelectedValue(), saveDir())));
+        hb.add(btn("Ayarlar", Widgets.Kind.HEADER, Widgets.Ico.GEAR, this::settings));
         JPanel east = new JPanel(new GridBagLayout());
         east.setOpaque(false);
         east.add(hb);
@@ -184,12 +205,12 @@ public final class PcApp implements LanBeamNode.Listener {
         Widgets.Card devices = new Widgets.Card(16);
         devices.setLayout(new BorderLayout(0, 10));
         devices.setPreferredSize(new Dimension(330, 100));
-        devices.add(label("Yakındaki cihazlar", 15, Font.BOLD, Theme.TEXT), BorderLayout.NORTH);
+        devices.add(new Widgets.Section("Yakındaki cihazlar", Widgets.Ico.DEVICES, teal()), BorderLayout.NORTH);
         devices.add(scroll(peerList), BorderLayout.CENTER);
         JPanel devButtons = new JPanel(new GridLayout(1, 2, 8, 0));
         devButtons.setOpaque(false);
-        devButtons.add(btn("Yenile", Widgets.Kind.TONAL, () -> node.refreshPeers()));
-        devButtons.add(btn("IP ile ekle…", Widgets.Kind.TONAL, this::addPeerByIp));
+        devButtons.add(btn("Yenile", Widgets.Kind.TONAL, Widgets.Ico.REFRESH, () -> node.refreshPeers()));
+        devButtons.add(btn("IP ile ekle…", Widgets.Kind.TONAL, Widgets.Ico.PLUS, this::addPeerByIp));
         devices.add(devButtons, BorderLayout.SOUTH);
 
         // ---- files to send (drag & drop)
@@ -208,11 +229,11 @@ public final class PcApp implements LanBeamNode.Listener {
         filesPanel.setLayout(new BorderLayout(0, 10));
         JPanel ftop = new JPanel(new BorderLayout(8, 0));
         ftop.setOpaque(false);
-        ftop.add(label("Gönderilecekler", 15, Font.BOLD, Theme.TEXT), BorderLayout.WEST);
+        ftop.add(new Widgets.Section("Gönderilecekler", Widgets.Ico.UPLOAD, Theme.PRIMARY), BorderLayout.WEST);
         JPanel fadd = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         fadd.setOpaque(false);
-        fadd.add(btn("Dosya ekle…", Widgets.Kind.TONAL, () -> choose(false)));
-        fadd.add(btn("Klasör ekle…", Widgets.Kind.TONAL, () -> choose(true)));
+        fadd.add(btn("Dosya ekle…", Widgets.Kind.TONAL, Widgets.Ico.FILE_ADD, () -> choose(false)));
+        fadd.add(btn("Klasör ekle…", Widgets.Kind.TONAL, Widgets.Ico.FOLDER_ADD, () -> choose(true)));
         ftop.add(fadd, BorderLayout.EAST);
         filesPanel.add(ftop, BorderLayout.NORTH);
         filesPanel.add(fileScroll, BorderLayout.CENTER);
@@ -227,15 +248,15 @@ public final class PcApp implements LanBeamNode.Listener {
         hintRow.add(fileSummary, BorderLayout.CENTER);
         JPanel hr = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
         hr.setOpaque(false);
-        hr.add(btn("Seçileni kaldır", Widgets.Kind.TEXT, this::removeSelectedFiles));
-        hr.add(btn("Temizle", Widgets.Kind.TEXT, () -> { fileModel.clear(); updateSummary(); }));
+        hr.add(btn("Seçileni kaldır", Widgets.Kind.TEXT, Widgets.Ico.TRASH, this::removeSelectedFiles));
+        hr.add(btn("Temizle", Widgets.Kind.TEXT, Widgets.Ico.BROOM, () -> { fileModel.clear(); updateSummary(); }));
         hintRow.add(hr, BorderLayout.EAST);
         fbottom.add(hintRow);
         fbottom.add(Box.createVerticalStrut(6));
         JPanel sendRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         sendRow.setOpaque(false);
-        sendRow.add(btn("Bağlantı oluştur", Widgets.Kind.TONAL, this::createLink));
-        sendBtn = btn("Cihaza gönder  →", Widgets.Kind.PRIMARY, this::sendToSelected);
+        sendRow.add(btn("Bağlantı oluştur", Widgets.Kind.TONAL, Widgets.Ico.LINK, this::createLink));
+        sendBtn = btn("Cihaza gönder", Widgets.Kind.PRIMARY, Widgets.Ico.SEND, this::sendToSelected);
         sendRow.add(sendBtn);
         fbottom.add(sendRow);
         filesPanel.add(fbottom, BorderLayout.SOUTH);
@@ -260,8 +281,8 @@ public final class PcApp implements LanBeamNode.Listener {
         trPanel.setPreferredSize(new Dimension(100, 230));
         JPanel trTop = new JPanel(new BorderLayout());
         trTop.setOpaque(false);
-        trTop.add(label("Aktarımlar", 15, Font.BOLD, Theme.TEXT), BorderLayout.WEST);
-        trTop.add(btn("Bitenleri temizle", Widgets.Kind.TEXT, this::clearFinishedTransfers), BorderLayout.EAST);
+        trTop.add(new Widgets.Section("Aktarımlar", Widgets.Ico.SPEED, violet()), BorderLayout.WEST);
+        trTop.add(btn("Bitenleri temizle", Widgets.Kind.TEXT, Widgets.Ico.BROOM, this::clearFinishedTransfers), BorderLayout.EAST);
         trPanel.add(trTop, BorderLayout.NORTH);
         trPanel.add(scroll(holder), BorderLayout.CENTER);
 
@@ -272,10 +293,18 @@ public final class PcApp implements LanBeamNode.Listener {
     }
 
     private static Widgets.Btn btn(String text, Widgets.Kind kind, Runnable r) {
-        Widgets.Btn b = new Widgets.Btn(text, kind);
+        return btn(text, kind, Widgets.Ico.NONE, r);
+    }
+
+    private static Widgets.Btn btn(String text, Widgets.Kind kind, Widgets.Ico icon, Runnable r) {
+        Widgets.Btn b = new Widgets.Btn(text, kind, icon);
         b.addActionListener(e -> r.run());
         return b;
     }
+
+    private static Color teal() { return Theme.dark ? new Color(0x4DB6AC) : new Color(0x00897B); }
+
+    private static Color violet() { return Theme.dark ? new Color(0xB39DDB) : new Color(0x6A1B9A); }
 
     private static JLabel label(String text, float size, int style, Color c) {
         JLabel l = new JLabel(text);
@@ -291,6 +320,7 @@ public final class PcApp implements LanBeamNode.Listener {
         s.getViewport().setOpaque(false);
         s.getVerticalScrollBar().setUnitIncrement(16);
         s.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        Widgets.slimScroll(s);
         return s;
     }
 
@@ -310,7 +340,8 @@ public final class PcApp implements LanBeamNode.Listener {
             g.draw(new RoundRectangle2D.Float(2, 2, w - 5, h - 5, 18, 18));
         }
         int y = h / 2 - (dashed ? 30 : 34);
-        if (dashed) { Widgets.dropIcon(g, w / 2, y - 6); y += 40; }
+        if (dashed) { if (h >= 125) Widgets.dropIcon(g, w / 2, y - 6); y += h >= 125 ? 40 : 0; }
+        else { Widgets.radar(g, w / 2, y - 14); y += 16; }
         g.setFont(Theme.font(14.5f, Font.BOLD));
         g.setColor(Theme.TEXT);
         FontMetrics fm = g.getFontMetrics();
@@ -453,6 +484,10 @@ public final class PcApp implements LanBeamNode.Listener {
         }
     }
 
+    private static String hex(Color c) {
+        return String.format("#%02x%02x%02x", c.getRed(), c.getGreen(), c.getBlue());
+    }
+
     private static String esc(String s) {
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
@@ -532,7 +567,7 @@ public final class PcApp implements LanBeamNode.Listener {
     private Share publishSelection() {
         List<FileSource> files = LocalFileSource.collect(selectedRoots());
         if (files.isEmpty()) {
-            JOptionPane.showMessageDialog(frame, "Önce gönderilecek dosya veya klasör ekleyin.", "LanBeam", JOptionPane.INFORMATION_MESSAGE);
+            Dialogs.message(frame, "LanBeam", "Önce gönderilecek dosya veya klasör ekleyin.", Dialogs.Level.INFO);
             return null;
         }
         return node.publish(files);
@@ -541,7 +576,7 @@ public final class PcApp implements LanBeamNode.Listener {
     private void sendToSelected() {
         Peer peer = peerList.getSelectedValue();
         if (peer == null) {
-            JOptionPane.showMessageDialog(frame, "Soldaki listeden bir cihaz seçin.\nCihaz görünmüyorsa uygulamanın açık ve aynı ağda olduğundan emin olun\nveya \"IP ile ekle\" kullanın.", "LanBeam", JOptionPane.INFORMATION_MESSAGE);
+            Dialogs.message(frame, "LanBeam", "Soldaki listeden bir cihaz seçin.\nCihaz görünmüyorsa uygulamanın açık ve aynı ağda olduğundan emin olun\nveya \"IP ile ekle\" kullanın.", Dialogs.Level.INFO);
             return;
         }
         final Share share = publishSelection();
@@ -549,6 +584,7 @@ public final class PcApp implements LanBeamNode.Listener {
         final TransferRow row = addRow("↑ " + peer.name + " cihazına: " + share.files.size() + " dosya, " + NetUtil.formatSize(share.total),
                 () -> node.unpublish(share));
         sendRows.put(share.token, row);
+        offerTokens.add(share.token);
         new Thread(() -> {
             try {
                 node.sendOffer(peer, share);
@@ -568,17 +604,23 @@ public final class PcApp implements LanBeamNode.Listener {
         sendRows.put(share.token, row);
         row.finish("Paylaşımda — telefonda LanBeam'de \"Bağlantıdan al\" ya da tarayıcıda açın", "Kapat",
                 () -> { node.unpublish(share); row.finish("Paylaşım kapatıldı", null, null); });
-        JTextField f = new JTextField(url);
+        JTextField f = Dialogs.field(url);
         f.setEditable(false);
         Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(url), null);
-        JOptionPane.showMessageDialog(frame, new Object[]{
-                "Paylaşım bağlantısı (panoya kopyalandı):", f,
-                "Aynı ağdaki herhangi bir cihaz bu adresi tarayıcıda açarak indirebilir.",
-                "LanBeam uygulamasında \"Bağlantıdan al\" ile açılırsa hızlı akış kullanılır."}, "Bağlantı", JOptionPane.INFORMATION_MESSAGE);
+        JPanel body = Dialogs.column();
+        body.add(Dialogs.caption("Paylaşım bağlantısı (panoya kopyalandı)"));
+        f.setAlignmentX(Component.LEFT_ALIGNMENT);
+        body.add(f);
+        body.add(Box.createVerticalStrut(10));
+        JLabel note = label("<html><body style='width:340px'>Aynı ağdaki herhangi bir cihaz bu adresi tarayıcıda açarak indirebilir. "
+                + "LanBeam uygulamasında \"Bağlantıdan al\" ile açılırsa hızlı akış kullanılır.</body></html>", 12.5f, Font.PLAIN, Theme.DIM);
+        note.setAlignmentX(Component.LEFT_ALIGNMENT);
+        body.add(note);
+        Dialogs.form(frame, "Bağlantı", body, "Tamam");
     }
 
     private void addPeerByIp() {
-        String s = JOptionPane.showInputDialog(frame, "Cihazın IP adresi (örn. 192.168.1.34 veya 192.168.1.34:8080):");
+        String s = Dialogs.input(frame, "IP ile ekle", "Cihazın IP adresi (örn. 192.168.1.34 veya 192.168.1.34:8080):");
         if (s == null || s.trim().isEmpty()) return;
         String host = s.trim();
         int port = 8080;
@@ -592,18 +634,18 @@ public final class PcApp implements LanBeamNode.Listener {
                 manualPeers.put(peer.id, peer);
                 refreshPeerList(node.peers());
             } catch (Exception e) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(frame, "Cihaza ulaşılamadı: " + e.getMessage(), "LanBeam", JOptionPane.WARNING_MESSAGE));
+                SwingUtilities.invokeLater(() -> Dialogs.message(frame, "LanBeam", "Cihaza ulaşılamadı: " + e.getMessage(), Dialogs.Level.WARN));
             }
         }).start();
     }
 
     private void receiveFromLink() {
-        String s = JOptionPane.showInputDialog(frame, "Paylaşım bağlantısı (http://ip:port/s/...):");
+        String s = Dialogs.input(frame, "Bağlantıdan al", "Paylaşım bağlantısı (http://ip:port/s/...):");
         if (s == null || s.trim().isEmpty()) return;
         try {
             startReceive(ShareLink.parse(s), "bağlantı");
         } catch (IllegalArgumentException e) {
-            JOptionPane.showMessageDialog(frame, "Geçersiz bağlantı.", "LanBeam", JOptionPane.WARNING_MESSAGE);
+            Dialogs.message(frame, "LanBeam", "Geçersiz bağlantı.", Dialogs.Level.WARN);
         }
     }
 
@@ -632,27 +674,39 @@ public final class PcApp implements LanBeamNode.Listener {
     }
 
     private void settings() {
-        JTextField name = new JTextField(deviceName());
-        JTextField dir = new JTextField(saveDir().getAbsolutePath());
-        JButton browse = new JButton("Seç…");
+        JTextField name = Dialogs.field(deviceName());
+        JTextField dir = Dialogs.field(saveDir().getAbsolutePath());
+        Widgets.Btn browse = new Widgets.Btn("Seç…", Widgets.Kind.TONAL, Widgets.Ico.FOLDER);
         browse.addActionListener(ev -> {
             JFileChooser fc = new JFileChooser(dir.getText());
             fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
             if (fc.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) dir.setText(fc.getSelectedFile().getAbsolutePath());
         });
-        JPanel dirRow = new JPanel(new BorderLayout(4, 0));
+        JPanel dirRow = new JPanel(new BorderLayout(8, 0));
+        dirRow.setOpaque(false);
+        dirRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         dirRow.add(dir, BorderLayout.CENTER);
         dirRow.add(browse, BorderLayout.EAST);
-        JComboBox<String> theme = new JComboBox<>(new String[]{"Otomatik (Windows'a uyar)", "Açık", "Koyu"});
+        JComboBox<String> theme = Dialogs.combo("Otomatik (Windows'a uyar)", "Açık", "Koyu");
         String cur = prefs.get("theme", "auto");
         theme.setSelectedIndex("light".equals(cur) ? 1 : "dark".equals(cur) ? 2 : 0);
-        int r = JOptionPane.showConfirmDialog(frame, new Object[]{"Cihaz adı:", name, Box.createVerticalStrut(6), "Gelen dosyaların kaydedileceği klasör:", dirRow,
-                        Box.createVerticalStrut(6), "Tema (uygulama yeniden açılınca değişir):", theme},
-                "Ayarlar", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (r != JOptionPane.OK_OPTION) return;
+
+        JPanel body = Dialogs.column();
+        body.setPreferredSize(new Dimension(420, 230));
+        name.setAlignmentX(Component.LEFT_ALIGNMENT);
+        theme.setAlignmentX(Component.LEFT_ALIGNMENT);
+        body.add(Dialogs.caption("Cihaz adı"));
+        body.add(name);
+        body.add(Box.createVerticalStrut(14));
+        body.add(Dialogs.caption("Gelen dosyaların kaydedileceği klasör"));
+        body.add(dirRow);
+        body.add(Box.createVerticalStrut(14));
+        body.add(Dialogs.caption("Tema (uygulama yeniden açılınca değişir)"));
+        body.add(theme);
+        if (!Dialogs.form(frame, "Ayarlar", body, "Kaydet")) return;
         File d = new File(dir.getText().trim());
         if (!d.isDirectory() && !d.mkdirs()) {
-            JOptionPane.showMessageDialog(frame, "Klasör oluşturulamadı.", "LanBeam", JOptionPane.WARNING_MESSAGE);
+            Dialogs.message(frame, "LanBeam", "Klasör oluşturulamadı.", Dialogs.Level.WARN);
             return;
         }
         prefs.put("saveDir", d.getAbsolutePath());
@@ -670,11 +724,11 @@ public final class PcApp implements LanBeamNode.Listener {
     @Override public void onOffer(Offer offer) {
         SwingUtilities.invokeLater(() -> {
             frame.toFront();
-            int r = JOptionPane.showConfirmDialog(frame,
-                    "<html><b>" + esc(offer.fromName) + "</b> size dosya göndermek istiyor:<br><br>"
-                            + esc(offer.describe()) + "<br><br>Kayıt yeri: " + esc(saveDir().getAbsolutePath()) + "<br><br>Kabul ediyor musunuz?</html>",
-                    "Gelen dosyalar", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-            if (r == JOptionPane.YES_OPTION) startReceive(offer.link, offer.fromName);
+            boolean yes = Dialogs.confirmHtml(frame, "Gelen dosyalar",
+                    "<b>" + Dialogs.esc(offer.fromName) + "</b> size dosya göndermek istiyor:<br><br>"
+                            + Dialogs.esc(offer.describe()) + "<br><br><span style='color:" + hex(Theme.DIM) + "'>Kayıt yeri: "
+                            + Dialogs.esc(saveDir().getAbsolutePath()) + "</span>", "Kabul et", "Reddet");
+            if (yes) startReceive(offer.link, offer.fromName);
             else node.reject(offer);
         });
     }
@@ -687,6 +741,12 @@ public final class PcApp implements LanBeamNode.Listener {
     @Override public void onSendFinished(Share share, boolean ok) {
         TransferRow row = sendRows.get(share.token);
         if (row == null) return;
+        if (offerTokens.remove(share.token)) {
+            // Plain-HTTP share: do not leave it downloadable once the chosen receiver is done.
+            node.unpublish(share);
+            row.finish(ok ? "Tamamlandı" : "Bağlantı kesildi", null, null);
+            return;
+        }
         if (ok) {
             row.finish("Tamamlandı", "Paylaşımı kapat", () -> { node.unpublish(share); row.finish("Tamamlandı", null, null); });
         } else {
@@ -696,6 +756,7 @@ public final class PcApp implements LanBeamNode.Listener {
 
     @Override public void onRejected(Share share) {
         node.unpublish(share);
+        offerTokens.remove(share.token);
         TransferRow row = sendRows.remove(share.token);
         if (row != null) row.finish("Karşı taraf reddetti", null, null);
     }

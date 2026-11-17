@@ -91,9 +91,13 @@ public final class Json {
         return v instanceof Number ? ((Number) v).longValue() : def;
     }
 
+    /** Nesting limit: a hostile packet like "[[[[..." must not overflow the stack (that would kill the app). */
+    private static final int MAX_DEPTH = 32;
+
     private static final class Parser {
         final String s;
         int i;
+        int depth;
 
         Parser(String s) { this.s = s; }
 
@@ -105,8 +109,10 @@ public final class Json {
             ws();
             if (i >= s.length()) throw new IllegalArgumentException("Unexpected end of JSON");
             char c = s.charAt(i);
-            if (c == '{') return object();
-            if (c == '[') return array();
+            if (c == '{' || c == '[') {
+                if (++depth > MAX_DEPTH) throw new IllegalArgumentException("JSON nested too deeply");
+                try { return c == '{' ? object() : array(); } finally { depth--; }
+            }
             if (c == '"') return string();
             if (s.startsWith("true", i)) { i += 4; return Boolean.TRUE; }
             if (s.startsWith("false", i)) { i += 5; return Boolean.FALSE; }

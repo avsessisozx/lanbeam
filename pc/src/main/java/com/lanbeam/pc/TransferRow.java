@@ -17,12 +17,18 @@ final class TransferRow extends Widgets.Card {
     private final JLabel status = new JLabel("Bekleniyor…");
     private final Widgets.Bar bar = new Widgets.Bar();
     private final Widgets.Btn action = new Widgets.Btn("İptal", Widgets.Kind.TEXT);
+    private final boolean upload;
+    private final Widgets.Badge badge;
     private Runnable onAction;
     private volatile boolean finished;
 
     TransferRow(String text, Runnable cancel) {
         super(12, 14, false);
-        setLayout(new BorderLayout(10, 4));
+        upload = !text.startsWith("↓");
+        badge = new Widgets.Badge(upload);
+        setLayout(new BorderLayout(12, 4));
+        // The badge shows the direction now, so the arrow glyph in front of the title goes.
+        if (text.startsWith("↑ ") || text.startsWith("↓ ")) text = text.substring(2);
         title.setText(text);
         title.setFont(Theme.font(13.5f, Font.BOLD));
         title.setForeground(Theme.TEXT);
@@ -43,6 +49,10 @@ final class TransferRow extends Widgets.Card {
         center.add(north, BorderLayout.NORTH);
         center.add(bar, BorderLayout.CENTER);
         center.add(status, BorderLayout.SOUTH);
+        JPanel badgeHolder = new JPanel(new java.awt.GridBagLayout());
+        badgeHolder.setOpaque(false);
+        badgeHolder.add(badge);
+        add(badgeHolder, BorderLayout.WEST);
         add(center, BorderLayout.CENTER);
         add(action, BorderLayout.EAST);
         setMaximumSize(new Dimension(Integer.MAX_VALUE, getPreferredSize().height + 4));
@@ -53,7 +63,7 @@ final class TransferRow extends Widgets.Card {
     void progress(long done, long total, double bps) {
         SwingUtilities.invokeLater(() -> {
             int v = total <= 0 ? 1000 : (int) (done * 1000 / total);
-            bar.set(v, Theme.PRIMARY);
+            bar.set(v, upload ? Theme.PRIMARY : Theme.SUCCESS);
             percent.setText(v / 10 + "%");
             String eta = "";
             if (bps > 0 && total > done) {
@@ -73,6 +83,8 @@ final class TransferRow extends Widgets.Card {
             Color c = bad ? Theme.DANGER : ok ? Theme.SUCCESS : Theme.DIM;
             if (text.startsWith("Tamam")) { bar.set(1000, Theme.SUCCESS); percent.setText("100%"); }
             else if (bad) bar.set(0, Theme.DANGER);
+            if (text.startsWith("Tamam")) badge.state(true, true);
+            else if (bad) badge.state(true, false);
             status.setForeground(c);
             status.setText(text);
             if (ok || bad) finished = true;
