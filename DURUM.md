@@ -1,4 +1,13 @@
-# LanBeam — durum (27 Ekim 2026, v0.4.0 yayınlandı)
+# LanBeam — durum (17 Kasım 2026, v0.5.0 yayınlandı)
+
+## v0.5.0 (17 Kasım 2026, bulut oturumu, main'e birleştirildi ve yayınlandı)
+- Güvenlik taraması yapıldı (kod okuma). Düzeltilen: JSON iç içe veri sınırı 32 (hazırlanmış UDP/offer paketiyle StackOverflowError ile çökme), HttpServer/Discovery bu hatayı yakalıyor, bozuk istek 400; PC'de karşıya gönderilen paylaşım aktarım bitince kapanıyor.
+- Açık bırakılanlar (bilinçli): trafik düz HTTP, imza anahtarı repoda, kabul ekranındaki dosya sayısı/boyutu doğrulanmıyor (teklif ile gerçek liste karşılaştırılmıyor), cihaz kimliği doğrulaması yok, CORS "*".
+- PC arayüzü: Dialogs sınıfı (JOptionPane yerine temalı pencereler; koyu temadaki beyaz butonlar buydu), ikonlu butonlar, Section başlıkları, durum rozetleri, ince kaydırma çubuğu, yeni logo (Widgets.logo), pencere simgesi.
+- Android arayüzü: emoji yerine vektör ikon (drawable/ic_*.xml), ikonlu başlıklar, başlıkta logo, uyarlanabilir simge (mipmap-anydpi).
+- Doğrulandı: CI (Android derleme+lint, PC testi: yeni kötü niyetli JSON testi dahil) geçti; PC arayüzü başsız ekranda (Xvfb) koyu ve açık temada, pencereler dahil ekran görüntüsüyle bakıldı.
+- Doğrulanmadı: Android arayüzü ve yeni simge görsel olarak hiç görülmedi (yalnız derlendi ve lint'ten geçti; ikonlar sola yaslı, yazı ortada çıkabilir); gerçek Windows'ta yazı tipi/ölçek.
+- Not: kullanıcının ekran görüntüsündeki "kesik butonlar" büyük ihtimalle ekran görüntüsünün kırpılmasıydı; 940 px genişlikte düzen sığıyor.
 
 ## 3 Kasım 2026 (bulut oturumu, sürüm numarası değişmedi, main'e birleştirildi)
 - Android: normal hotspot açıkken "Doğrudan bağlantı" artık denenmez, hemen normal yola geçer (eskiden ~28 sn kaybediyordu). Doğrulandı: CI (derleme+lint, PC testi) geçti. Doğrulanmadı: gerçek telefonda.
