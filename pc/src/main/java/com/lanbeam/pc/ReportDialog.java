@@ -5,9 +5,8 @@ import com.lanbeam.core.NetUtil;
 import com.lanbeam.core.Peer;
 import com.lanbeam.core.SpeedTest;
 
-import javax.swing.JButton;
+import javax.swing.BorderFactory;
 import javax.swing.JDialog;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -78,10 +77,13 @@ final class ReportDialog {
         final JDialog d = new JDialog(owner, "Bağlantı / Rapor / Geri bildirim", true);
         final JTextArea area = new JTextArea(26, 82);
         area.setEditable(false);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
         area.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         area.setBackground(Theme.CARD);
         area.setForeground(Theme.TEXT);
         area.setText("Toplanıyor…");
+        area.setMargin(new java.awt.Insets(8, 10, 8, 10));
         final Runnable refresh = () -> new Thread(() -> {
             collect(saveDir);
             final String text = Diagnostics.report("PC", "Windows/Java");
@@ -89,7 +91,7 @@ final class ReportDialog {
         }, "lanbeam-report").start();
         refresh.run();
 
-        JButton speed = new JButton("Hız testi" + (selected == null ? " (önce bir cihaz seçin)" : ""));
+        Widgets.Btn speed = new Widgets.Btn("Hız testi" + (selected == null ? " (önce bir cihaz seçin)" : ""), Widgets.Kind.TONAL, Widgets.Ico.SPEED);
         speed.setEnabled(selected != null);
         speed.addActionListener(e -> {
             speed.setEnabled(false);
@@ -109,32 +111,40 @@ final class ReportDialog {
                 SwingUtilities.invokeLater(() -> {
                     speed.setText("Hız testi");
                     speed.setEnabled(true);
-                    JOptionPane.showMessageDialog(d, m, "Hız testi", JOptionPane.INFORMATION_MESSAGE);
+                    Dialogs.message(d, "Hız testi", m, Dialogs.Level.INFO);
                     refresh.run();
                 });
             }, "lanbeam-speedtest").start();
         });
-        JButton copy = new JButton("Kopyala");
+        Widgets.Btn copy = new Widgets.Btn("Kopyala", Widgets.Kind.TONAL, Widgets.Ico.COPY);
         copy.addActionListener(e -> {
             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(area.getText()), null);
-            copy.setText("Kopyalandı ✓");
+            copy.setText("Kopyalandı");
         });
-        JButton gh = new JButton("GitHub'da bildir");
+        Widgets.Btn gh = new Widgets.Btn("GitHub'da bildir", Widgets.Kind.TONAL, Widgets.Ico.SEND);
         gh.addActionListener(e -> {
             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(area.getText()), null);
-            JOptionPane.showMessageDialog(d, "Rapor panoya kopyalandı. Açılan sayfada yapıştırın (Ctrl+V).", "LanBeam", JOptionPane.INFORMATION_MESSAGE);
+            Dialogs.message(d, "LanBeam", "Rapor panoya kopyalandı. Açılan sayfada yapıştırın (Ctrl+V).", Dialogs.Level.INFO);
             try { Desktop.getDesktop().browse(new URI("https://github.com/avsessisozx/lanbeam/issues/new")); } catch (Exception ignored) {}
         });
-        JButton close = new JButton("Kapat");
+        Widgets.Btn close = new Widgets.Btn("Kapat", Widgets.Kind.PRIMARY);
         close.addActionListener(e -> d.dispose());
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
+        buttons.setBackground(Theme.BG);
         buttons.add(speed);
         buttons.add(copy);
         buttons.add(gh);
         buttons.add(close);
         d.getContentPane().setLayout(new BorderLayout());
-        d.getContentPane().add(new JScrollPane(area), BorderLayout.CENTER);
+        d.getContentPane().setBackground(Theme.BG);
+        JScrollPane sp = new JScrollPane(area);
+        sp.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createEmptyBorder(12, 12, 0, 12),
+                BorderFactory.createLineBorder(Theme.STROKE, 1)));
+        sp.setBackground(Theme.BG);
+        Widgets.slimScroll(sp);
+        sp.getViewport().setBackground(Theme.CARD);
+        d.getContentPane().add(sp, BorderLayout.CENTER);
         d.getContentPane().add(buttons, BorderLayout.SOUTH);
         d.pack();
         d.setMinimumSize(new Dimension(640, 420));

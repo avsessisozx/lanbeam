@@ -93,8 +93,8 @@ public final class HttpServer {
                 if (!res.committed) res.text(404, "Not found");
             } catch (SocketException e) {
                 // client went away
-            } catch (Exception e) {
-                if (!res.committed) res.text(500, "Error: " + e);
+            } catch (Exception | StackOverflowError e) {
+                if (!res.committed) res.text(400, "Bad request");
             }
             out.flush();
         } catch (IOException ignored) {
@@ -162,7 +162,7 @@ public final class HttpServer {
         /** Reads the request body (bounded by Content-Length and maxBytes). */
         public String bodyText(int maxBytes) throws IOException {
             String cl = header("content-length");
-            int len = cl == null ? 0 : (int) Math.min(Long.parseLong(cl), maxBytes);
+            int len = cl == null ? 0 : (int) Math.max(0, Math.min(Long.parseLong(cl), maxBytes));
             byte[] buf = new byte[len];
             int off = 0;
             while (off < len) {

@@ -96,6 +96,26 @@ public final class LoopbackTest {
                 "report has no ip/token/file names");
         check(rep.contains("<ip>") && rep.contains("<token>"), "sanitized markers");
 
+        // Hostile input: deeply nested JSON must be rejected cleanly, never overflow the stack.
+        StringBuilder evil = new StringBuilder("{\"app\":\"lanbeam\",\"x\":");
+        for (int i = 0; i < 5000; i++) evil.append('[');
+        boolean rejected = false;
+        try { Json.parseObject(evil.toString()); } catch (IllegalArgumentException e) { rejected = true; }
+        check(rejected, "nested JSON rejected");
+        check(Json.parseObject("{\"a\":[[[1]]]}").size() == 1, "normal nested JSON still parses");
+        // Same payload as a UDP discovery packet and as an offer: both nodes must stay alive afterwards.
+        byte[] evilBytes = evil.toString().getBytes("UTF-8");
+        try (java.net.DatagramSocket ds = new java.net.DatagramSocket()) {
+            ds.send(new java.net.DatagramPacket(evilBytes, evilBytes.length, java.net.InetAddress.getByName("127.0.0.1"), Protocol.DISCOVERY_PORT));
+        }
+        java.net.HttpURLConnection oc = (java.net.HttpURLConnection) new java.net.URL("http://127.0.0.1:" + receiver.port() + "/api/offer").openConnection();
+        oc.setRequestMethod("POST");
+        oc.setDoOutput(true);
+        try (OutputStream os = oc.getOutputStream()) { os.write(evilBytes); }
+        check(oc.getResponseCode() == 400, "hostile offer answered 400, got " + oc.getResponseCode());
+        Thread.sleep(300);
+        check(LanBeamNode.probe("127.0.0.1", receiver.port()).id.equals("rx-id"), "node alive after hostile input");
+
         sender.stop();
         receiver.stop();
         System.out.println("ALL TESTS PASSED");
