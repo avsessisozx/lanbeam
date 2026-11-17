@@ -1,5 +1,7 @@
 # LanBeam
 
+> ⬇️ **İndir:** [Son sürüm](https://github.com/avsessisozx/lanbeam/releases/latest) (Android için `.apk`, PC için `.jar` dosyasını seç)
+
 Aynı ağdaki (aynı modem/Wi-Fi) cihazlar arasında hızlı dosya aktarımı: **PC ↔ Android** ve
 **Android ↔ Android**. Router yoksa Android telefonlar kendi hotspot'larını kurar.
 
